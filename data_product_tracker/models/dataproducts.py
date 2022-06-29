@@ -1,4 +1,11 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from data_product_tracker.models import base
@@ -10,6 +17,8 @@ class DataProductTypeHierarchy(base.Base, base.CreatedOnMixin):
     child_id = Column(BigInteger, ForeignKey("data_product_types.id"))
     description = Column(Text)
 
+    __table_args__ = (UniqueConstraint("parent_id", "child_id"),)
+
 
 class DataProductHierarchy(base.Base, base.CreatedOnMixin):
     __tablename__ = "data_product_hierarchies"
@@ -17,6 +26,8 @@ class DataProductHierarchy(base.Base, base.CreatedOnMixin):
     child_id = Column(BigInteger, ForeignKey("data_products.id"))
 
     invocation_id = Column(BigInteger, ForeignKey("invocations.id"))
+
+    __table_args__ = (UniqueConstraint("parent_id", "child_id"),)
 
 
 class DataProductType(base.Base, base.CreatedOnMixin):

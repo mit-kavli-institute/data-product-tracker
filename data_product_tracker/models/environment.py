@@ -1,6 +1,6 @@
 from socket import gethostname
 
-from sqlalchemy import BigInteger, Column, ForeignKey, String
+from sqlalchemy import BigInteger, Column, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from data_product_tracker.models import base
@@ -26,6 +26,8 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     environment = relationship("Environment", back_populates="variables")
     variable = relationship("Variable", back_populates="environments")
 
+    __table_args__ = UniqueConstraint("environment_id", "variable_id")
+
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "library_environment_mappings"
@@ -34,6 +36,8 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
 
     environment = relationship("Environment", back_populates="libraries")
     library = relationship("Library", back_populates="environments")
+
+    __table_args__ = UniqueConstraint("environment_id", "library_id")
 
 
 class Variable(base.Base, base.CreatedOnMixin):
@@ -45,6 +49,8 @@ class Variable(base.Base, base.CreatedOnMixin):
         "VariableEnvironmentMap", back_populates="variable"
     )
 
+    __table_args__ = UniqueConstraint("key", "value")
+
 
 class Library(base.Base, base.CreatedOnMixin):
     __tablename__ = "variables"
@@ -54,3 +60,5 @@ class Library(base.Base, base.CreatedOnMixin):
     environments = relationship(
         "LibraryEnvironmentMap", back_populates="library"
     )
+
+    __table_args__ = UniqueConstraint("name", "version")
