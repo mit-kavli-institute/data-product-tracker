@@ -20,6 +20,7 @@ class Environment(base.Base, base.CreatedOnMixin):
 
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "variable_environment_mappings"
+
     environment_id = Column(BigInteger, ForeignKey(Environment.id))
     variable_id = Column(BigInteger, ForeignKey("variables.id"))
 
@@ -31,6 +32,7 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "library_environment_mappings"
+
     environment_id = Column(BigInteger, ForeignKey(Environment.id))
     library_id = Column(BigInteger, ForeignKey("libraries.id"))
 
