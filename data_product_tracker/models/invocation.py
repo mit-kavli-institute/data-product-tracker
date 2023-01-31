@@ -11,8 +11,6 @@ class Invocation(base.Base, base.CreatedOnMixin):
 
     user = Column(String(128), default=getuser)
     function = Column(String(128))
-
     environment_id = Column(BigInteger, ForeignKey("environments.id"))
 
-    positional_args = Column(psql.JSONB, default=list)
-    keyword_args = Column(psql.JSONB, default=dict)
+    command = Column(sa.Text())
