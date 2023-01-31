@@ -3,6 +3,7 @@ import typing
 
 import mmh3
 from sqlalchemy import BigInteger, Column, ForeignKey, String
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from data_product_tracker.models import base
 
@@ -19,7 +20,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
 
     invocation_id = Column(BigInteger, ForeignKey("invocations.id"))
     mmh3_hash = Column(BigInteger)
-    path = Column(String(256))
+    _path = Column("path", String(256))
 
     @classmethod
     def from_file(cls, fd: typing.IO) -> "DataProduct":
@@ -34,3 +35,15 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     def from_path(cls, path: pathlib.Path) -> "DataProduct":
         with open(path, "rb") as fin:
             return cls.from_file(fin)
+
+    @hybrid_property
+    def path(self) -> pathlib.Path:
+        return pathlib.Path(self._path)
+
+    @path.setter
+    def path(self, value: pathlib.Path):
+        self._path = str(value.expanduser())
+
+    @path.expression
+    def path(cls):
+        return cls._path
