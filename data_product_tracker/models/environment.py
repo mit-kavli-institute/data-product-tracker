@@ -59,8 +59,9 @@ class Library(base.Base, base.CreatedOnMixin):
 
     name = Column(String(64))
     version = Column(String(64))
+    location = Column(String(256))
     environments = relationship(
         "LibraryEnvironmentMap", back_populates="library"
     )
 
-    __table_args__ = UniqueConstraint("name", "version")
+    __table_args__ = UniqueConstraint("name", "version", "location")
