@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import BigInteger, Column, DateTime, Index, func
 from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.orm import declarative_mixin, declared_attr
@@ -6,6 +7,13 @@ from sqlalchemy.orm import declarative_mixin, declared_attr
 @as_declarative()
 class Base:
     id = Column(BigInteger, primary_key=True)
+
+    @classmethod
+    def select(cls, *attrs: str):
+        if len(attrs) > 0:
+            return sa.select([getattr(cls, attr) for attr in attrs])
+
+        return sa.select(cls)
 
 
 @declarative_mixin
