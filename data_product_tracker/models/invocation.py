@@ -1,7 +1,7 @@
 from getpass import getuser
 
+import sqlalchemy as sa
 from sqlalchemy import BigInteger, Column, ForeignKey, String
-from sqlalchemy.dialects import postgresql as psql
 
 from data_product_tracker.models import base
 

@@ -4,7 +4,7 @@ import configurables as conf
 import sqlalchemy as sa
 
 
-@conf.configurable("Credentials")
+@conf.configurable("Credentials", conf.ENV > conf.CONF)
 @conf.param("username")
 @conf.param("password")
 @conf.option("database_name", default="dataproducttracker")
