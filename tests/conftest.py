@@ -13,10 +13,10 @@ from alembic.config import Config
 
 @pytest.fixture(scope="module")
 def database():
-    user = os.environ["TEST_DB_USER"]
-    host = os.environ["TEST_DB_HOST"]
-    password = os.environ["TEST_DB_PASSWORD"]
-    port = os.environ["TEST_DB_PORT"]
+    user = os.environ["username"]
+    password = os.environ["password"]
+    host = os.environ["dastabase_host"]
+    port = os.environ["database_port"]
 
     conn = psycopg2.connect(user=user, host=host, password=password)
     database_name = f"dpt_testing_{os.getpid()}"
