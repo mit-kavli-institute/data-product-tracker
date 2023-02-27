@@ -13,7 +13,7 @@ services:
     depends_on:
       - db
     env_file:
-      - .env
+      - .test_env
     volumes:
       - .:/testing
       - /tmp:/tmp

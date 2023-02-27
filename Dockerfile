@@ -4,11 +4,11 @@ COPY . /testing
 
 ENV MAKEFLAGS="-j10"
 
-RUN apt-get update -y
-RUN apt-get install -y libpq-dev gcc ssh git
+RUN apt-get update && apt-get install -y libpq-dev gcc ssh git
 RUN \
     pip install --upgrade pip && \
     pip install --upgrade setuptools && \
+    pip install python-dotenv && \
     pip install -r requirements_dev.txt && \
     mkdir /root/.ssh/
 
@@ -18,4 +18,3 @@ RUN \
     ssh-keyscan tessgit.mit.edu >> /root/.ssh/known_hosts && \
     git clone git@tessgit.mit.edu:wcfong/configurables.git && \
     cd configurables && pip install . && cd .. \
-CMD ["tox"]
