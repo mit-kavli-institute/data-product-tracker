@@ -1,7 +1,6 @@
 import sqlalchemy as sa
 from sqlalchemy import BigInteger, Column, DateTime, Index, func
-from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.orm import declarative_mixin, declared_attr
+from sqlalchemy.orm import as_declarative, declarative_mixin, declared_attr
 
 
 @as_declarative()
