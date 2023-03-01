@@ -7,7 +7,6 @@ import sqlalchemy as sa
 from sqlalchemy import BigInteger, Column, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
-from data_product_tracker.conn import db
 from data_product_tracker.models import base
 
 
@@ -32,7 +31,7 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     environment = relationship("Environment", back_populates="variables")
     variable = relationship("Variable", back_populates="environments")
 
-    __table_args__ = UniqueConstraint("environment_id", "variable_id")
+    __table_args__ = (UniqueConstraint("environment_id", "variable_id"),)
 
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
@@ -44,7 +43,7 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     environment = relationship("Environment", back_populates="libraries")
     library = relationship("Library", back_populates="environments")
 
-    __table_args__ = UniqueConstraint("environment_id", "library_id")
+    __table_args__ = (UniqueConstraint("environment_id", "library_id"),)
 
 
 class Variable(base.Base, base.CreatedOnMixin):
@@ -56,7 +55,7 @@ class Variable(base.Base, base.CreatedOnMixin):
         "VariableEnvironmentMap", back_populates="variable"
     )
 
-    __table_args__ = UniqueConstraint("key", "value")
+    __table_args__ = (UniqueConstraint("key", "value"),)
 
     def __hash__(self):
         return hash(self.key, self.value)
@@ -67,7 +66,7 @@ class Variable(base.Base, base.CreatedOnMixin):
         return other.key == self.key and other.value == self.value
 
     @classmethod
-    def get_os_variables(cls):
+    def get_os_variables(cls, db):
         q = cls.select()
         variables = []
         filters = []
@@ -97,31 +96,26 @@ class Variable(base.Base, base.CreatedOnMixin):
 
 
 class Library(base.Base, base.CreatedOnMixin):
-    __tablename__ = "variables"
+    __tablename__ = "libraries"
 
     name = Column(String(64))
     version = Column(String(64))
-    location = Column(String(256))
     environments = relationship(
         "LibraryEnvironmentMap", back_populates="library"
     )
 
-    __table_args__ = UniqueConstraint("name", "version", "location")
+    __table_args__ = (UniqueConstraint("name", "version"),)
 
     def __hash__(self):
-        return hash(self.name, self.version, self.location)
+        return hash(self.name, self.version)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (
-            self.name == other.name
-            and self.version == other.version
-            and self.location == other.location
-        )
+        return self.name == other.name and self.version == other.version
 
     @classmethod
-    def get_installed_python_libraries(cls):
+    def get_installed_python_libraries(cls, db):
         q = cls.select()
         libraries = []
         filters = []

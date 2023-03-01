@@ -1,13 +1,13 @@
 """Establish test-wide fixtures for `data_product_tracker` package"""
-
 import os
 
 import psycopg2
 import pytest
-from psycopg2.errors import DuplicateDatabase
+from psycopg2.errors import DuplicateDatabase, ObjectInUse
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from alembic import command
 from alembic.config import Config
@@ -62,20 +62,30 @@ def database():
                 fout.write(line)
     config = Config("./alembic.ini.conv")
     config.attributes["connection"] = conn
-
+    command.upgrade(config, "head")
+    command.revision(config, autogenerate=True)
     command.upgrade(config, "head")
     conn.close()
 
     engine = create_engine(
-        f"postgresql://{user}:{password}@{host}:{port}/{database_name}"
+        f"postgresql://{user}:{password}@{host}:{port}/{database_name}",
+        poolclass=NullPool,
     )
-    sessionmaker(bind=engine)
-    yield sessionmaker
-
-    conn = psycopg2.connect(
-        dbname="postgres", user=user, host=host, password=password
-    )
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    with conn.cursor() as cur:
-        cur.execute(f"DROP DATABASE {database_name}")
-    conn.close()
+    db = sessionmaker(bind=engine)
+    try:
+        yield db()
+        del db
+        del engine
+    finally:
+        while True:
+            try:
+                conn = psycopg2.connect(
+                    dbname="postgres", user=user, host=host, password=password
+                )
+                conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+                with conn.cursor() as cur:
+                    cur.execute(f"DROP DATABASE {database_name}")
+                conn.close()
+                break
+            except ObjectInUse:
+                continue

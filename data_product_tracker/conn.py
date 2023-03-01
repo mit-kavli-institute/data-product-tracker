@@ -1,10 +1,12 @@
 import pathlib
+import warnings
 
 import configurables as conf
 import sqlalchemy as sa
+from sqlalchemy.pool import NullPool
 
 
-@conf.configurable("Credentials", conf.ENV > conf.CONF)
+@conf.configurable("Credentials", conf.ENV > conf.CFG)
 @conf.param("username")
 @conf.param("password")
 @conf.option("database_name", default="dataproducttracker")
@@ -15,23 +17,21 @@ def sessionmaker_from_config(
 ):
     engine = sa.create_engine(
         f"postgresql://{username}:{password}"
-        f"@{database_host}:{database_port}/{database_name}"
+        f"@{database_host}:{database_port}/{database_name}",
+        poolclass=NullPool,
     )
     Session = sa.orm.sessionmaker(engine)
     return Session
 
 
 CONFIG_DIR = pathlib.Path("~") / ".config" / "dpt"
-CONFIG_PATH = CONFIG_DIR / "db.conf"
+CONFIG_PATH = CONFIG_DIR.expanduser() / "db.conf"
 
-if not CONFIG_DIR.exists():
-    CONFIG_DIR.mkdir(mode=0o600)
-
-if not CONFIG_PATH.exists():
-    sessionmaker_from_config.emit(CONFIG_PATH)
-    raise RuntimeError(
-        f"{str(CONFIG_PATH)} does not exist. Creating scaffold there..."
+if not CONFIG_DIR.exists() or CONFIG_PATH.exists():
+    warnings.Warn(
+        f"{str(CONFIG_PATH)} does not exist. Creating scaffold there...",
+        RuntimeWarning,
     )
-
-
-db = sessionmaker_from_config(CONFIG_PATH)
+    db = None
+else:
+    db = sessionmaker_from_config(CONFIG_PATH)
