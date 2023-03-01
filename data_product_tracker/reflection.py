@@ -75,8 +75,15 @@ def get_environment(db) -> e.Environment:
     n_pkgs = max([i for i, _ in enumerate(pkg_resources.working_set)])
     q = (
         sa.select(e.Environment.id, library_count, variable_count)
-        .join(e.Environment.variables)
-        .join(e.Environment.libraries)
+        .join(
+            e.VariableEnvironmentMap,
+            e.LibraryEnvironmentMap.environment_id
+            == e.VariableEnvironmentMap.environment_id,
+        )
+        .join(e.LibraryEnvironmentMap.environment)
+        .join(e.LibraryEnvironmentMap.library)
+        .join(e.VariableEnvironmentMap.variable)
+        .select_from(e.LibraryEnvironmentMap)
         .where(variables_filter)
         .where(libraries_filter)
         .where(e.Environment.host == socket.gethostname())
