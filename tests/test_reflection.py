@@ -16,6 +16,7 @@ from data_product_tracker.reflection import (
 
 def test_reflection_of_variables(database):
     with database as db:
+        reflect_variables(db)
         variable_q = sa.select(e.Variable)
         for k, v in os.environ.items():
             q = variable_q.where(e.Variable.key == k, e.Variable.value == v)
@@ -29,6 +30,7 @@ def test_reflection_of_variables(database):
 
 def test_reflection_of_libraries(database):
     with database as db:
+        reflect_libraries(db)
         library_q = sa.select(e.Library)
         for i, pkg in enumerate(pkg_resources.working_set, start=1):
             q = library_q.where(
@@ -91,17 +93,18 @@ def test_non_duplication_of_envs(database):
         assert env_id_1 == env_id_2
     except AssertionError:
         with database as db:
-            print(db.execute(sa.select(e.VariableEnvironmentMap)).all())
-            print(db.execute(sa.select(e.LibraryEnvironmentMap)).all())
-            q = (
+            n_pkgs = len([_ for _ in pkg_resources.working_set])
+            library_count = sa.func.count(
+                e.LibraryEnvironmentMap.library_id.distinct()
+            )
+            variable_count = sa.func.count(
+                e.VariableEnvironmentMap.variable_id.distinct()
+            )
+            raw_q = (
                 sa.select(
                     e.LibraryEnvironmentMap.environment_id,
-                    sa.func.count(
-                        e.LibraryEnvironmentMap.library_id.distinct()
-                    ),
-                    sa.func.count(
-                        e.VariableEnvironmentMap.variable_id.distinct()
-                    ),
+                    library_count,
+                    variable_count,
                 )
                 .join(
                     e.VariableEnvironmentMap,
@@ -110,6 +113,19 @@ def test_non_duplication_of_envs(database):
                 )
                 .group_by(e.LibraryEnvironmentMap.environment_id)
             )
+
+            q = raw_q.having(
+                library_count == n_pkgs, variable_count == len(os.environ)
+            )
+            print(f"#libraries {n_pkgs}, #variables {len(os.environ)}")
             print(db.execute(q).all())
-            print(len(os.environ))
+            print(db.execute(raw_q).all())
+            print(q.compile(compile_kwargs={"literal_binds": True}))
+            print("Library Diff")
+            for i, pkg in enumerate(pkg_resources.working_set):
+                lib_q = sa.select(e.Library.id).where(
+                    e.Library.name == pkg.key, e.Library.version == pkg.version
+                )
+                hit = db.execute(lib_q).first()
+                print(f"{i:02} | {pkg.key}:{pkg.version} -> {hit}")
             raise

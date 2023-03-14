@@ -15,10 +15,14 @@ class Environment(base.Base, base.CreatedOnMixin):
 
     host = Column(String(64), default=gethostname, nullable=False)
     variables = relationship(
-        "VariableEnvironmentMap", back_populates="environment"
+        "Variable",
+        back_populates="environments",
+        secondary="variable_environment_mappings",
     )
     libraries = relationship(
-        "LibraryEnvironmentMap", back_populates="environment"
+        "Library",
+        back_populates="environments",
+        secondary="library_environment_mappings",
     )
 
 
@@ -31,9 +35,6 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     variable_id = Column(
         BigInteger, ForeignKey("variables.id"), nullable=False
     )
-
-    environment = relationship("Environment", back_populates="variables")
-    variable = relationship("Variable", back_populates="environments")
 
     __table_args__ = (UniqueConstraint("environment_id", "variable_id"),)
 
@@ -52,10 +53,6 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
         BigInteger, ForeignKey(Environment.id), nullable=False
     )
     library_id = Column(BigInteger, ForeignKey("libraries.id"), nullable=False)
-
-    environment = relationship("Environment", back_populates="libraries")
-    library = relationship("Library", back_populates="environments")
-
     __table_args__ = (UniqueConstraint("environment_id", "library_id"),)
 
     def __repr__(self):
@@ -72,7 +69,9 @@ class Variable(base.Base, base.CreatedOnMixin):
     key = Column(String(64), nullable=False)
     value = Column(String(256), nullable=False)
     environments = relationship(
-        "VariableEnvironmentMap", back_populates="variable"
+        "Environment",
+        back_populates="variables",
+        secondary="variable_environment_mappings",
     )
 
     __table_args__ = (UniqueConstraint("key", "value"),)
@@ -121,7 +120,9 @@ class Library(base.Base, base.CreatedOnMixin):
     name = Column(String(64), nullable=False)
     version = Column(String(64), nullable=False)
     environments = relationship(
-        "LibraryEnvironmentMap", back_populates="library"
+        "Environment",
+        back_populates="libraries",
+        secondary="library_environment_mappings",
     )
 
     __table_args__ = (UniqueConstraint("name", "version"),)

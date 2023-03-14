@@ -82,13 +82,9 @@ def get_environment(db) -> int:
     library_subq = sa.select(e.Library.id).where(libraries_filter)
     variable_subq = sa.select(e.Variable.id).where(variables_filter)
 
-    n_pkgs = max([i for i, _ in enumerate(pkg_resources.working_set)])
+    n_pkgs = len([_ for _ in pkg_resources.working_set])
     q = (
-        sa.select(
-            e.LibraryEnvironmentMap.environment_id,
-            library_count.label("n_matching_libraries"),
-            variable_count.label("n_matching_variables"),
-        )
+        sa.select(e.LibraryEnvironmentMap.environment_id)
         .join(
             e.VariableEnvironmentMap,
             e.LibraryEnvironmentMap.environment_id
@@ -101,10 +97,10 @@ def get_environment(db) -> int:
     )
 
     with db:
-        env_id = db.execute(q).first()
+        env_id = db.execute(q).scalar()
         if env_id is None:
             raise ModelDoesNotExist(e.Environment)
-        env_id
+        return env_id
 
 
 def get_or_create_env(db) -> tuple[int, bool]:
