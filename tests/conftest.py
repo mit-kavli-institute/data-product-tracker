@@ -9,11 +9,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
-from alembic import command
-from alembic.config import Config
+from data_product_tracker.models.base import Base
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def database():
     kwargs = {}
     with open(".test_env", "rt") as fin:
@@ -44,34 +43,12 @@ def database():
             cur.execute(f"DROP DATABASE {database_name}")
             cur.execute(f"CREATE DATABASE {database_name}")
 
-    conn = psycopg2.connect(
-        dbname=database_name, user=user, host=host, password=password
-    )
-
-    with open("./alembic.ini", "rt") as fin, open(
-        "./alembic.ini.conv", "wt"
-    ) as fout:
-        for line in fin:
-            if line.startswith("sqlalchemy.url"):
-                url = (
-                    f"postgresql://{user}:{password}@{host}"
-                    f":{port}/{database_name}"
-                )
-                fout.write(f"sqlalchemy.url = {url}\n")
-            else:
-                fout.write(line)
-    config = Config("./alembic.ini.conv")
-    config.attributes["connection"] = conn
-    command.upgrade(config, "head")
-    command.revision(config, autogenerate=True)
-    command.upgrade(config, "head")
-    conn.close()
-
     engine = create_engine(
         f"postgresql://{user}:{password}@{host}:{port}/{database_name}",
         poolclass=NullPool,
     )
     db = sessionmaker(bind=engine)
+    Base.metadata.create_all(bind=engine)
     try:
         yield db()
         del db

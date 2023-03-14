@@ -13,7 +13,7 @@ from data_product_tracker.models import base
 class Environment(base.Base, base.CreatedOnMixin):
     __tablename__ = "environments"
 
-    host = Column(String(64), default=gethostname)
+    host = Column(String(64), default=gethostname, nullable=False)
     variables = relationship(
         "VariableEnvironmentMap", back_populates="environment"
     )
@@ -25,32 +25,52 @@ class Environment(base.Base, base.CreatedOnMixin):
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "variable_environment_mappings"
 
-    environment_id = Column(BigInteger, ForeignKey(Environment.id))
-    variable_id = Column(BigInteger, ForeignKey("variables.id"))
+    environment_id = Column(
+        BigInteger, ForeignKey(Environment.id), nullable=False
+    )
+    variable_id = Column(
+        BigInteger, ForeignKey("variables.id"), nullable=False
+    )
 
     environment = relationship("Environment", back_populates="variables")
     variable = relationship("Variable", back_populates="environments")
 
     __table_args__ = (UniqueConstraint("environment_id", "variable_id"),)
 
+    def __repr__(self):
+        return (
+            "VariableEnvironmentMap("
+            f"environment_id={self.environment_id}, "
+            f"variable_id={self.variable_id})"
+        )
+
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "library_environment_mappings"
 
-    environment_id = Column(BigInteger, ForeignKey(Environment.id))
-    library_id = Column(BigInteger, ForeignKey("libraries.id"))
+    environment_id = Column(
+        BigInteger, ForeignKey(Environment.id), nullable=False
+    )
+    library_id = Column(BigInteger, ForeignKey("libraries.id"), nullable=False)
 
     environment = relationship("Environment", back_populates="libraries")
     library = relationship("Library", back_populates="environments")
 
     __table_args__ = (UniqueConstraint("environment_id", "library_id"),)
 
+    def __repr__(self):
+        return (
+            "LibraryEnvironmentMap("
+            f"environment_id={self.environment_id}, "
+            f"library_id={self.library_id})"
+        )
+
 
 class Variable(base.Base, base.CreatedOnMixin):
     __tablename__ = "variables"
 
-    key = Column(String(64))
-    value = Column(String(256))
+    key = Column(String(64), nullable=False)
+    value = Column(String(256), nullable=False)
     environments = relationship(
         "VariableEnvironmentMap", back_populates="variable"
     )
@@ -98,8 +118,8 @@ class Variable(base.Base, base.CreatedOnMixin):
 class Library(base.Base, base.CreatedOnMixin):
     __tablename__ = "libraries"
 
-    name = Column(String(64))
-    version = Column(String(64))
+    name = Column(String(64), nullable=False)
+    version = Column(String(64), nullable=False)
     environments = relationship(
         "LibraryEnvironmentMap", back_populates="library"
     )
