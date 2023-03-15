@@ -9,10 +9,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
+from data_product_tracker import tracker as _tracker
+from data_product_tracker.models.base import Base
+
 
 @pytest.fixture()
 def database():
-    from data_product_tracker.models.base import Base
 
     kwargs = {}
     with open(".test_env", "rt") as fin:
@@ -69,10 +71,7 @@ def database():
 
 
 @pytest.fixture()
-def tracker(database, mocker):
-    mocker.patch("data_product_tracker.conn.db", new=database)
-    from data_product_tracker import tracker as _tracker
-
+def tracker(database):
     _tracker.assign_db(database)
     _tracker.env_id = None
 
