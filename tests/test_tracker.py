@@ -3,15 +3,10 @@ from tempfile import TemporaryDirectory
 
 import sqlalchemy as sa
 
+from data_product_tracker.models.dataproducts import DataProduct
 
-def test_trackers(database, mocker):
-    mocker.patch("data_product_tracker.conn.db", new=database)
-    from data_product_tracker import tracker
-    from data_product_tracker.models.dataproducts import DataProduct
 
-    tracker.assign_db(database)
-    tracker.env_id = None
-
+def test_trackers(database, tracker):
     select_dp = sa.select(DataProduct)
     with TemporaryDirectory() as _dir:
         test_path = pathlib.Path(_dir)
@@ -32,14 +27,7 @@ def test_trackers(database, mocker):
             assert dp.parents[0].path == test_path / "test_file_1.txt"
 
 
-def test_tracker_resolution(database, mocker):
-    mocker.patch("data_product_tracker.conn.db", new=database)
-    from data_product_tracker import tracker
-    from data_product_tracker.models.dataproducts import DataProduct
-
-    tracker.assign_db(database)
-    tracker.env_id = None
-
+def test_tracker_resolution(database, tracker):
     select_dp = sa.select(DataProduct)
     with TemporaryDirectory() as _dir:
         test_path = pathlib.Path(_dir)

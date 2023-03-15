@@ -9,11 +9,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
-from data_product_tracker.models.base import Base
-
 
 @pytest.fixture()
 def database():
+    from data_product_tracker.models.base import Base
+
     kwargs = {}
     with open(".test_env", "rt") as fin:
         for line in fin:
@@ -66,3 +66,14 @@ def database():
                 break
             except ObjectInUse:
                 continue
+
+
+@pytest.fixture()
+def tracker(database, mocker):
+    mocker.patch("data_product_tracker.conn.db", new=database)
+    from data_product_tracker import tracker as _tracker
+
+    _tracker.assign_db(database)
+    _tracker.env_id = None
+
+    return _tracker
