@@ -79,6 +79,27 @@ class DataProductTracker:
         hash_override=None,
         determine_hash=False,
     ):
+        """
+        Track the given file/path and establish relations to any provided
+        parents. This call will result in SQL emissions.
+
+        TODO:
+        Determine if ASYNC calls will make this more performant in high IO
+        environments.
+
+        Parameters
+        ----------
+        target_file: Union[str, os.PathLike, io.IOBase]
+            The file to track. If given an IOBase object, it must implement
+            some form of `instance.name` to provide a location on disk.
+        parents: Optional[list[Union[str, os.PathLike, io.IOBase]]]
+            Any parents that were needed in creating the `target_file`.
+        hash_override: Optional[int]
+            If given override any hash value assigned to the data product.
+        determine_hash: Optional[bool]
+            If true, determine the hash value of the `target_file` using the
+            non-cryptographic murmur3 hash algorithm.
+        """
         invocation_id = self.resolve_invocation(inspect.stack()[1:])
         with self._db as db:
             dp = DataProduct(path=target_file, invocation_id=invocation_id)
