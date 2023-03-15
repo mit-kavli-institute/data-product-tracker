@@ -16,3 +16,5 @@ sqlalchemy
 alembic
 hypothesis
 deal
+mmh3
+pytest-mock

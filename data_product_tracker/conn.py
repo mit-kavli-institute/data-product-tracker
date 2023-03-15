@@ -12,7 +12,7 @@ from sqlalchemy.pool import NullPool
 @conf.option("database_name", default="dataproducttracker")
 @conf.option("database_host", default="localhost")
 @conf.option("database_port", type=int, default=5432)
-def sessionmaker_from_config(
+def session_from_config(
     username, password, database_name, database_host, database_port
 ):
     engine = sa.create_engine(
@@ -21,17 +21,18 @@ def sessionmaker_from_config(
         poolclass=NullPool,
     )
     Session = sa.orm.sessionmaker(engine)
-    return Session
+    return Session()
 
 
 CONFIG_DIR = pathlib.Path("~") / ".config" / "dpt"
 CONFIG_PATH = CONFIG_DIR.expanduser() / "db.conf"
 
+
 if not CONFIG_DIR.exists() or CONFIG_PATH.exists():
-    warnings.Warn(
+    warnings.warn(
         f"{str(CONFIG_PATH)} does not exist. Creating scaffold there...",
         RuntimeWarning,
     )
     db = None
 else:
-    db = sessionmaker_from_config(CONFIG_PATH)
+    db = session_from_config(CONFIG_PATH)

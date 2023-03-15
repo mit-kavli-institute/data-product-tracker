@@ -1,3 +1,4 @@
+import sys
 from getpass import getuser
 
 import sqlalchemy as sa
@@ -14,3 +15,15 @@ class Invocation(base.Base, base.CreatedOnMixin):
     environment_id = Column(BigInteger, ForeignKey("environments.id"))
 
     command = Column(sa.Text())
+
+    def __repr__(self):
+        return f"<Invocation {self.id}: {self.function}() from {self.command}>"
+
+    @classmethod
+    def reflect_call(cls, function, environment_id=None):
+        invocation = cls(
+            function=function,
+            command="".join(sys.argv),
+            environment_id=environment_id,
+        )
+        return invocation
