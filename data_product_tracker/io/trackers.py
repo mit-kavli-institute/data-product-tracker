@@ -21,30 +21,37 @@ class DataProductTracker:
         self.env_id = None
 
     def assign_db(self, database):
+        """
+        Reassign the database object for the tracker. Useful for testing.
+        """
         self._db = database
 
     def resolve_environment(self):
+        """
+        Get or create the current environment id.
+        """
         if self.env_id is None:
             env_id, _ = get_or_create_env(self._db)
             self.env_id = env_id
 
         return self.env_id
 
-    def resolve_dataproduct(self, parent_path):
-        if isinstance(parent_path, pathlib.Path):
-            path = str(parent_path)
-        elif isinstance(parent_path, IOBase):
-            path = parent_path.name
+    def resolve_dataproduct(self, path):
+        """
+        Attempt to resolve the given path to an existing dataproduct.
+        """
+        if isinstance(path, pathlib.Path):
+            path = str(path)
+        elif isinstance(path, IOBase):
+            path = path.name
         else:
-            path = parent_path
+            path = path
 
         try:
             return self._product_map[path]
         except KeyError:
             with self._db as db:
-                q = sa.select(DataProduct).where(
-                    DataProduct.path == parent_path
-                )
+                q = sa.select(DataProduct).where(DataProduct.path == path)
                 result = db.execute(q).scalar()
 
                 if result is None:
