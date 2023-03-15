@@ -61,6 +61,18 @@ class DataProductTracker:
             return result
 
     def resolve_invocation(self, invocation_stack):
+        """
+        Resolve the invocation using the provided callstack. It is assumed
+        that the provided callstack has the appropriate context such that
+        the top of the stack is the "invoking" function.
+
+        Visual Example of the Callstack
+
+        [0][ function_call_to_make_file ]  <- desired context
+        [1][ function_which_calls ^ ]
+        [ ... ]
+        [-1][ python entry ]
+        """
         reference_frame = invocation_stack[0]
         key = ".".join((s.function for s in invocation_stack))
 
