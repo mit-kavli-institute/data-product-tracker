@@ -1,6 +1,7 @@
 import inspect
 import pathlib
 from io import IOBase
+from itertools import chain
 
 import sqlalchemy as sa
 
@@ -18,6 +19,7 @@ class DataProductTracker:
         self.assign_db(db)
         self._product_map = {}
         self._invocation_cache = {}
+        self._variable_cache: dict[int, int] = {}
         self.env_id = None
 
     def assign_db(self, database):
@@ -91,10 +93,30 @@ class DataProductTracker:
                 invocation_id = invocation.id
         return invocation_id
 
+    def resolve_variable_hints(self, *variables):
+        """
+        Attempt to resolve given variables (objects) to hints provided. If no
+        hint was found continue as the variable might have moved in memory
+        space.
+        """
+        ids = []
+        for variable in variables:
+            try:
+                ids.append(self._variable_cache[id(variable)])
+            except KeyError:
+                continue
+        return ids
+
+    def associate_variables(self, target_file, *variables):
+        product_id = self.resolve_dataproduct(target_file).id
+        for variable in variables:
+            self._variable_cache[id(variable)] = product_id
+
     def track(
         self,
         target_file,
         parents=None,
+        variable_hints=None,
         hash_override=None,
         determine_hash=False,
     ):
@@ -113,6 +135,8 @@ class DataProductTracker:
             some form of `instance.name` to provide a location on disk.
         parents: Optional[list[Union[str, os.PathLike, io.IOBase]]]
             Any parents that were needed in creating the `target_file`.
+        variable_hints: Optional[list[Any]]
+            Provide variables which will be used to lookup parent relations.
         hash_override: Optional[int]
             If given override any hash value assigned to the data product.
         determine_hash: Optional[bool]
@@ -133,9 +157,12 @@ class DataProductTracker:
 
             # Determine relationships
             relationships = []
+            variables = [] if variable_hints is None else variable_hints
             parents = [] if parents is None else parents
-            for parent in parents:
-                parent_id = self.resolve_dataproduct(parent).id
+            parents = [self.resolve_dataproduct(p).id for p in parents]
+
+            variable_ids = self.resolve_variable_hints(*variables)
+            for parent_id in set(chain(variable_ids, parents)):
                 rel = {
                     "parent_id": parent_id,
                     "child_id": child_id,

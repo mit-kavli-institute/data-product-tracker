@@ -55,3 +55,28 @@ def test_tracker_resolution(database, tracker):
                 select_dp.where(DataProduct.path == ref_path)
             ).scalar()
             assert dp.parents[0].path == parent_path
+
+
+def test_variable_hints(database, tracker):
+    select_dp = sa.select(DataProduct)
+    with TemporaryDirectory() as _dir:
+        test_path = pathlib.Path(_dir)
+
+        variables = [1, 2, 3]
+        other_variables = "some other type"
+        fout = open(test_path / "test.out", "wb")
+        fout.write(b"BYTES")
+        tracker.track(fout)
+        tracker.associate_variables(fout, variables, other_variables)
+
+        dependent = open(test_path / "dep.out", "wt")
+        dependent.write("Ooga booga")
+        tracker.track(dependent, variable_hints=[variables])
+
+        with database as db:
+            dep_path = test_path / "dep.out"
+            parent_path = test_path / "test.out"
+            dp = db.execute(
+                select_dp.where(DataProduct.path == dep_path)
+            ).scalar()
+            assert dp.parents[0].path == parent_path
