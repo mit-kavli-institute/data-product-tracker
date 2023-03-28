@@ -64,3 +64,6 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     @path.expression
     def path(cls):
         return cls._path
+
+    def calculate_hash(self):
+        raise NotImplementedError
