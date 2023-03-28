@@ -51,7 +51,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
         return pathlib.Path(self._path)
 
     @path.setter
-    def path(self, value: [str, pathlib.Path]):
+    def path(self, value: typing.Union[str, pathlib.Path]):
         if isinstance(value, pathlib.Path):
             path = value
         elif isinstance(value, IOBase):
