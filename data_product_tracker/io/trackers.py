@@ -1,6 +1,6 @@
 import inspect
 import pathlib
-from io import IOBase
+from io import FileIO
 from itertools import chain
 
 import sqlalchemy as sa
@@ -44,7 +44,7 @@ class DataProductTracker:
         """
         if isinstance(path, pathlib.Path):
             path = str(path)
-        elif isinstance(path, IOBase):
+        elif isinstance(path, FileIO):
             path = path.name
         else:
             path = path
@@ -130,10 +130,10 @@ class DataProductTracker:
 
         Parameters
         ----------
-        target_file: Union[str, os.PathLike, io.IOBase]
-            The file to track. If given an IOBase object, it must implement
+        target_file: Union[str, os.PathLike, io.FileIO]
+            The file to track. If given an FileIO object, it must implement
             some form of `instance.name` to provide a location on disk.
-        parents: Optional[list[Union[str, os.PathLike, io.IOBase]]]
+        parents: Optional[list[Union[str, os.PathLike, io.FileIO]]]
             Any parents that were needed in creating the `target_file`.
         variable_hints: Optional[list[Any]]
             Provide variables which will be used to lookup parent relations.
