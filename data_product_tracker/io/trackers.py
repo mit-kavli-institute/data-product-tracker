@@ -1,6 +1,5 @@
 import inspect
 import pathlib
-from io import FileIO
 from itertools import chain
 
 import sqlalchemy as sa
@@ -44,10 +43,13 @@ class DataProductTracker:
         """
         if isinstance(path, pathlib.Path):
             path = str(path)
-        elif isinstance(path, FileIO):
-            path = path.name
         else:
-            path = path
+            try:
+                path = path.name
+            except AttributeError:
+                raise RuntimeError(
+                    f"{path} could not be resolved to a resource on disk."
+                )
 
         try:
             return self._product_map[path]
