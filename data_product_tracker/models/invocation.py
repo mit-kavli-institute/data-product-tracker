@@ -23,7 +23,7 @@ class Invocation(base.Base, base.CreatedOnMixin):
     def reflect_call(cls, function, environment_id=None):
         invocation = cls(
             function=function,
-            command="".join(sys.argv),
+            command=" ".join(sys.argv),
             environment_id=environment_id,
         )
         return invocation
