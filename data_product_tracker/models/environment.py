@@ -4,7 +4,14 @@ from socket import gethostname
 
 import pkg_resources
 import sqlalchemy as sa
-from sqlalchemy import BigInteger, Column, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    ForeignKey,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from data_product_tracker.models import base
@@ -67,7 +74,7 @@ class Variable(base.Base, base.CreatedOnMixin):
     __tablename__ = "variables"
 
     key = Column(String(64), nullable=False)
-    value = Column(String(256), nullable=False)
+    value = Column(Text(), nullable=False)
     environments = relationship(
         "Environment",
         back_populates="variables",
