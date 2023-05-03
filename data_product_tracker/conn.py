@@ -2,7 +2,7 @@ import pathlib
 import warnings
 
 import configurables as conf
-import sqlalchemy as sa
+from sqlalchemy import create_engine, orm
 from sqlalchemy.pool import NullPool
 
 
@@ -15,20 +15,20 @@ from sqlalchemy.pool import NullPool
 def session_from_config(
     username, password, database_name, database_host, database_port
 ):
-    engine = sa.create_engine(
+    engine = create_engine(
         f"postgresql://{username}:{password}"
         f"@{database_host}:{database_port}/{database_name}",
         poolclass=NullPool,
     )
-    Session = sa.orm.sessionmaker(engine)
+    Session = orm.sessionmaker(engine)
     return Session()
 
 
-CONFIG_DIR = pathlib.Path("~") / ".config" / "dpt"
-CONFIG_PATH = CONFIG_DIR.expanduser() / "db.conf"
+CONFIG_DIR = (pathlib.Path("~") / ".config" / "dpt").expanduser()
+CONFIG_PATH = CONFIG_DIR / "db.conf"
 
 
-if not CONFIG_DIR.exists() or CONFIG_PATH.exists():
+if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
     warnings.warn(
         f"{str(CONFIG_PATH)} does not exist. Creating scaffold there...",
         RuntimeWarning,
