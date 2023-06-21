@@ -15,6 +15,7 @@ psycopg2
 sqlalchemy
 alembic
 hypothesis
+hypothesis_fspaths
 deal
 mmh3
 pytest-mock

@@ -41,9 +41,12 @@ class DataProductTracker:
         """
         Attempt to resolve the given path to an existing dataproduct.
         """
+        if isinstance(path, str):
+            path = pathlib.Path(path)
+
         if not isinstance(path, pathlib.Path):
             try:
-                path = pathlib.Path(path)
+                path = pathlib.Path(path.name)
             except AttributeError:
                 raise RuntimeError(
                     f"{path} could not be resolved to a resource on disk."

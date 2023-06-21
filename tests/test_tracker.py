@@ -57,6 +57,10 @@ def test_tracker_resolution(database, tracker):
             assert dp.parents[0].path == parent_path
 
 
+def test_tracker_anonymous_file(database, tracker):
+    raise NotImplementedError
+
+
 def test_variable_hints(database, tracker):
     select_dp = sa.select(DataProduct)
     with TemporaryDirectory() as _dir:
