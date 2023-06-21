@@ -41,15 +41,15 @@ class DataProductTracker:
         """
         Attempt to resolve the given path to an existing dataproduct.
         """
-        if isinstance(path, pathlib.Path):
-            path = str(path)
-        else:
+        if not isinstance(path, pathlib.Path):
             try:
-                path = path.name
+                path = pathlib.Path(path)
             except AttributeError:
                 raise RuntimeError(
                     f"{path} could not be resolved to a resource on disk."
                 )
+
+        path = path.expanduser().resolve()
 
         try:
             return self._product_map[path]
