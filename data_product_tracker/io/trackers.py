@@ -27,6 +27,7 @@ class DataProductTracker:
         """
         self._db = database
 
+    @deal.ensure(contracts.empty_caches)
     def dump_cache(self):
         """
         Removes all cache references to an empty dictionary.
@@ -124,6 +125,7 @@ class DataProductTracker:
                 continue
         return ids
 
+    @deal.ensure(contracts.variables_associated_with_file)
     def associate_variables(self, target_file, *variables):
         """
         For the given target file, associate the memory pointer locations of
