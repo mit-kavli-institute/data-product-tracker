@@ -3,6 +3,7 @@ import os
 import pathlib
 from contextlib import contextmanager
 
+import deal
 import psycopg2
 import pytest
 from psycopg2.errors import DuplicateDatabase, ObjectInUse
@@ -13,6 +14,8 @@ from sqlalchemy.pool import NullPool
 
 from data_product_tracker import tracker as _tracker
 from data_product_tracker.models.base import Base
+
+deal.enable()
 
 
 @pytest.fixture()
