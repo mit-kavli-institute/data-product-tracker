@@ -16,7 +16,7 @@ from data_product_tracker.reflection import get_or_create_env
 class DataProductTracker:
     def __init__(self):
         self.assign_db(db)
-        self._product_map = {}
+        self._product_map: dict[str | pathlib.Path, int] = {}
         self._invocation_cache = {}
         self._variable_cache: dict[int, int] = {}
         self.env_id = None
@@ -37,22 +37,22 @@ class DataProductTracker:
 
         return self.env_id
 
-    def resolve_dataproduct(self, path):
+    def resolve_dataproduct(self, path) -> int:
         """
         Attempt to resolve the given path to an existing dataproduct.
         """
         if isinstance(path, str):
             path = pathlib.Path(path)
 
-        if not isinstance(path, pathlib.Path):
+        elif not isinstance(path, pathlib.Path):
             try:
                 path = pathlib.Path(path.name)
             except AttributeError:
-                raise RuntimeError(
-                    f"{path} could not be resolved to a resource on disk."
-                )
+                # Final catch is resolving by casting to str
+                path = str(path)
 
-        path = path.expanduser().resolve()
+        # Finally cast everything back to a Path
+        path = pathlib.Path(path).expanduser().resolve()
 
         try:
             return self._product_map[path]
@@ -62,10 +62,11 @@ class DataProductTracker:
                 result = db.execute(q).scalar()
 
                 if result is None:
-                    raise
-
-                self._product_map[str(result.path)] = result
-            return result
+                    result = DataProduct.from_path(path)
+                    db.add(result)
+                    db.commit()
+                self._product_map[result.path] = result.id
+            return result.id
 
     def resolve_invocation(self, invocation_stack):
         """
@@ -113,7 +114,7 @@ class DataProductTracker:
         return ids
 
     def associate_variables(self, target_file, *variables):
-        product_id = self.resolve_dataproduct(target_file).id
+        product_id = self.resolve_dataproduct(target_file)
         for variable in variables:
             self._variable_cache[id(variable)] = product_id
 
@@ -164,10 +165,10 @@ class DataProductTracker:
             relationships = []
             variables = [] if variable_hints is None else variable_hints
             parents = [] if parents is None else parents
-            parents = [self.resolve_dataproduct(p).id for p in parents]
+            parent_ids = [self.resolve_dataproduct(p) for p in parents]
 
             variable_ids = self.resolve_variable_hints(*variables)
-            for parent_id in set(chain(variable_ids, parents)):
+            for parent_id in set(chain(variable_ids, parent_ids)):
                 rel = {
                     "parent_id": parent_id,
                     "child_id": child_id,

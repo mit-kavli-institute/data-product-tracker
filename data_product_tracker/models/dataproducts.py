@@ -36,7 +36,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     def from_file(cls, fd: typing.IO) -> "DataProduct":
         path = fd.name
         fd.seek(0)
-        hash_val = mmh3.hash64(fd.read())
+        hash_val = mmh3.hash64(fd.read())[0]
 
         instance = cls(path=path, mmh3_hash=hash_val)
         return instance
