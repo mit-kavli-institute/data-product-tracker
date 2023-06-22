@@ -1,5 +1,6 @@
 """Establish test-wide fixtures for `data_product_tracker` package"""
 import os
+import pathlib
 from contextlib import contextmanager
 
 import psycopg2
@@ -131,3 +132,8 @@ def database_obj():
                 break
             except ObjectInUse:
                 continue
+
+
+def ensure_directory(path: pathlib.Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path

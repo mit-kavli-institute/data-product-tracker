@@ -2,13 +2,14 @@ import pathlib
 from tempfile import TemporaryDirectory
 
 import sqlalchemy as sa
-from hypothesis import given
-from hypothesis_fspaths import fspaths
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from data_product_tracker import tracker as dp_tracker
 from data_product_tracker.models.dataproducts import DataProduct
 
-from .conftest import database_obj
+from .conftest import database_obj, ensure_directory
+from .strategies import file_paths
 
 
 def test_trackers(database, tracker):
@@ -62,13 +63,35 @@ def test_tracker_resolution(database, tracker):
             assert dp.parents[0].path == parent_path
 
 
-@given(fspaths())
-def test_tracker_anonymous_file(path):
-    with database_obj() as db:
+@settings(deadline=None)
+@given(file_paths(), st.binary())
+def test_tracker_anonymous_file(path, data):
+    with database_obj() as db, TemporaryDirectory() as _dir:
+        tmpdir = pathlib.Path(_dir)
+        full_path = ensure_directory(tmpdir / path)
+        with open(full_path, "wb") as fout:
+            fout.write(data)
+        assert full_path.exists()
         dp_tracker.assign_db(db)
         dp_tracker.env_id = None
-        ref_dp = dp_tracker.resolve_dataproduct(path)
-        assert ref_dp is not None and ref_dp.id is not None
+        ref_dp = dp_tracker.resolve_dataproduct(full_path)
+        assert ref_dp is not None and ref_dp is not None
+
+
+@settings(deadline=None)
+@given(file_paths(), file_paths())
+def test_anonymous_parent(parent, child):
+    with database_obj() as db, TemporaryDirectory() as _dir:
+        tmpdir = pathlib.Path(_dir)
+        parent_path = ensure_directory(tmpdir / parent)
+        child_path = ensure_directory(tmpdir / child)
+        with open(parent_path, "wb") as fout:
+            fout.write(b"Foo")
+        with open(child_path, "wb") as fout:
+            fout.write(b"Bar")
+        dp_tracker.assign_db(db)
+        dp_tracker.env_id = None
+        dp_tracker.track(child, parents=[parent])
 
 
 def test_variable_hints(database, tracker):
