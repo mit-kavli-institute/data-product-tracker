@@ -2,8 +2,13 @@ import pathlib
 from tempfile import TemporaryDirectory
 
 import sqlalchemy as sa
+from hypothesis import given
+from hypothesis_fspaths import fspaths
 
+from data_product_tracker import tracker as dp_tracker
 from data_product_tracker.models.dataproducts import DataProduct
+
+from .conftest import database_obj
 
 
 def test_trackers(database, tracker):
@@ -57,8 +62,13 @@ def test_tracker_resolution(database, tracker):
             assert dp.parents[0].path == parent_path
 
 
-def test_tracker_anonymous_file(database, tracker):
-    raise NotImplementedError
+@given(fspaths())
+def test_tracker_anonymous_file(path):
+    with database_obj() as db:
+        dp_tracker.assign_db(db)
+        dp_tracker.env_id = None
+        ref_dp = dp_tracker.resolve_dataproduct(path)
+        assert ref_dp is not None and ref_dp.id is not None
 
 
 def test_variable_hints(database, tracker):
