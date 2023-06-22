@@ -2,8 +2,8 @@ import inspect
 import pathlib
 from itertools import chain
 
+import deal
 import sqlalchemy as sa
-from dpcontracts import ensure
 
 from data_product_tracker import contracts
 from data_product_tracker.conn import db
@@ -35,7 +35,7 @@ class DataProductTracker:
         self._invocation_cache = {}
         self._variable_cache: dict[int, int] = {}
 
-    @ensure("environment in database", contracts.environment_exists)
+    @deal.ensure(contracts.environment_exists)
     def resolve_environment(self):
         """
         Get or create the current environment id.
@@ -46,7 +46,7 @@ class DataProductTracker:
 
         return self.env_id
 
-    @ensure("dataproduct in database", contracts.dataproduct_exists)
+    @deal.ensure(contracts.dataproduct_exists)
     def resolve_dataproduct(self, path) -> int:
         """
         Attempt to resolve the given path to an existing dataproduct.
@@ -78,7 +78,7 @@ class DataProductTracker:
                 self._product_map[result.path] = result.id
             return result.id
 
-    @ensure("invocation in database", contracts.invocation_exists)
+    @deal.ensure(contracts.invocation_exists)
     def resolve_invocation(self, invocation_stack):
         """
         Resolve the invocation using the provided callstack. It is assumed

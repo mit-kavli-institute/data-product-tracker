@@ -15,15 +15,15 @@ def _pk_in_database(db, Model, pk):
         return db.execute(sa.select(q)).scalar()
 
 
-def invocation_exists(args, result):
-    db = args.self._db
-    return _pk_in_database(db, Invocation, result)
+def invocation_exists(_):
+    db = _.self._db
+    return _pk_in_database(db, Invocation, _.result)
 
 
-def environment_exists(args, result):
-    db = args.self._db
-    return _pk_in_database(db, Environment, result)
+def environment_exists(_):
+    db = _.self._db
+    return _pk_in_database(db, Environment, _.result)
 
 
-def dataproduct_exists(args, result):
-    return _pk_in_database(args.self._db, DataProduct, result)
+def dataproduct_exists(_):
+    return _pk_in_database(_.self._db, DataProduct, _.result)
