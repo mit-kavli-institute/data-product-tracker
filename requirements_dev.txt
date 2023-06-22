@@ -19,3 +19,4 @@ hypothesis_fspaths
 deal
 mmh3
 pytest-mock
+dpcontracts

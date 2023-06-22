@@ -3,7 +3,9 @@ import pathlib
 from itertools import chain
 
 import sqlalchemy as sa
+from dpcontracts import ensure
 
+from data_product_tracker import contracts
 from data_product_tracker.conn import db
 from data_product_tracker.models.dataproducts import (
     DataProduct,
@@ -16,10 +18,8 @@ from data_product_tracker.reflection import get_or_create_env
 class DataProductTracker:
     def __init__(self):
         self.assign_db(db)
-        self._product_map: dict[str | pathlib.Path, int] = {}
-        self._invocation_cache = {}
-        self._variable_cache: dict[int, int] = {}
         self.env_id = None
+        self.dump_cache()
 
     def assign_db(self, database):
         """
@@ -27,6 +27,15 @@ class DataProductTracker:
         """
         self._db = database
 
+    def dump_cache(self):
+        """
+        Removes all cache references to an empty dictionary.
+        """
+        self._product_map: dict[str | pathlib.Path, int] = {}
+        self._invocation_cache = {}
+        self._variable_cache: dict[int, int] = {}
+
+    @ensure("environment in database", contracts.environment_exists)
     def resolve_environment(self):
         """
         Get or create the current environment id.
@@ -37,6 +46,7 @@ class DataProductTracker:
 
         return self.env_id
 
+    @ensure("dataproduct in database", contracts.dataproduct_exists)
     def resolve_dataproduct(self, path) -> int:
         """
         Attempt to resolve the given path to an existing dataproduct.
@@ -68,6 +78,7 @@ class DataProductTracker:
                 self._product_map[result.path] = result.id
             return result.id
 
+    @ensure("invocation in database", contracts.invocation_exists)
     def resolve_invocation(self, invocation_stack):
         """
         Resolve the invocation using the provided callstack. It is assumed
@@ -114,6 +125,28 @@ class DataProductTracker:
         return ids
 
     def associate_variables(self, target_file, *variables):
+        """
+        For the given target file, associate the memory pointer locations of
+        each passed variable reference.
+
+        Each of these pointer locations can then be used as a hint to resolve
+        the passed file later in time.
+
+        Parameters
+        ----------
+        target_file: Union[str, os.PathLike, io.FileIO]
+            The file to be assoicated with the passed variables
+        variables: Any
+            The variables to associate with the file. The memory addresses
+            of the variable will be used. If the memory location changes
+            or crosses process memory boundaries this reference will be
+            unreliable.
+
+        Notes
+        -----
+        This method is a quality of life hint. It cannot preserve pointer
+        locations across multiprocess boundaries or manual deletion.
+        """
         product_id = self.resolve_dataproduct(target_file)
         for variable in variables:
             self._variable_cache[id(variable)] = product_id
@@ -160,6 +193,7 @@ class DataProductTracker:
             db.add(dp)
             db.commit()  # Emit SQL and return assigned id
             child_id = dp.id
+            child_path = dp.path
 
             # Determine relationships
             relationships = []
@@ -176,7 +210,7 @@ class DataProductTracker:
                 relationships.append(rel)
             db.bulk_insert_mappings(DataProductHierarchy, relationships)
             db.commit()
-            self._product_map[str(dp.path)] = dp
+            self._product_map[child_path] = child_id
 
             return dp
 
