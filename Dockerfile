@@ -10,7 +10,7 @@ RUN \
     pip install --upgrade setuptools && \
     pip install python-dotenv && \
     pip install -r requirements_dev.txt && \
-    mkdir /root/.ssh/
+    mkdir -p /root/.ssh/
 
 ADD docker_runner /root/.ssh/id_rsa
 RUN \

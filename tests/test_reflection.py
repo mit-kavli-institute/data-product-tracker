@@ -1,7 +1,6 @@
 import os
 
 import pkg_resources
-import pytest  # noqa 401
 import sqlalchemy as sa
 
 from data_product_tracker.models import environment as e
@@ -13,9 +12,11 @@ from data_product_tracker.reflection import (
     reflect_variables,
 )
 
+from .conftest import database_obj
 
-def test_reflection_of_variables(database):
-    with database as db:
+
+def test_reflection_of_variables():
+    with database_obj() as db:
         reflect_variables(db)
         variable_q = sa.select(e.Variable)
         for k, v in os.environ.items():
@@ -28,8 +29,8 @@ def test_reflection_of_variables(database):
         assert count == len(os.environ)
 
 
-def test_reflection_of_libraries(database):
-    with database as db:
+def test_reflection_of_libraries():
+    with database_obj() as db:
         reflect_libraries(db)
         library_q = sa.select(e.Library)
         for i, pkg in enumerate(pkg_resources.working_set, start=1):
@@ -44,8 +45,8 @@ def test_reflection_of_libraries(database):
         assert count == i
 
 
-def test_variable_filter(database):
-    with database as db:
+def test_variable_filter():
+    with database_obj() as db:
         reflect_variables(db)
         q = sa.select(e.Variable).where(get_os_environ_filter_clause())
         variables = db.execute(q).scalars()
@@ -55,8 +56,8 @@ def test_variable_filter(database):
             assert key in remote
 
 
-def test_library_filter(database):
-    with database as db:
+def test_library_filter():
+    with database_obj() as db:
         reflect_libraries(db)
         q = sa.select(e.Library).where(get_library_filter_clause())
         libraries = db.execute(q).scalars()
@@ -68,10 +69,12 @@ def test_library_filter(database):
             assert (pkg.key, pkg.version) in remote
 
 
-def test_reflection_of_environment(database):
-    env_id, _ = get_or_create_env(database)
-    library_ref = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
-    with database as db:
+def test_reflection_of_environment():
+    with database_obj() as db:
+        env_id, _ = get_or_create_env(db)
+        library_ref = {
+            pkg.key: pkg.version for pkg in pkg_resources.working_set
+        }
         q = sa.select(e.Environment).where(e.Environment.id == env_id)
         environment = db.execute(q).scalars().first()
         for variable in environment.variables:
@@ -81,18 +84,18 @@ def test_reflection_of_environment(database):
             assert library.version == library_ref[library.name]
 
 
-def test_non_duplication_of_envs(database):
-    env_id_1, created = get_or_create_env(database)
+def test_non_duplication_of_envs():
+    with database_obj() as db:
+        env_id_1, created = get_or_create_env(db)
 
-    assert created
+        assert created
 
-    try:
-        env_id_2, created = get_or_create_env(database)
+        try:
+            env_id_2, created = get_or_create_env(db)
 
-        assert not created
-        assert env_id_1 == env_id_2
-    except AssertionError:
-        with database as db:
+            assert not created
+            assert env_id_1 == env_id_2
+        except AssertionError:
             n_pkgs = len([_ for _ in pkg_resources.working_set])
             library_count = sa.func.count(
                 e.LibraryEnvironmentMap.library_id.distinct()
