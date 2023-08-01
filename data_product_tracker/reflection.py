@@ -1,8 +1,11 @@
 import os
 import socket
+from functools import wraps
+from time import sleep
 
 import pkg_resources
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 
 from data_product_tracker.exceptions import ModelDoesNotExist
 from data_product_tracker.models import environment as e
@@ -28,6 +31,31 @@ def get_library_filter_clause():
     return sa.or_(*filters)
 
 
+def db_retry(max_retries=10, backoff_factor=2):
+    """
+    Wrap a function to retry a database operation. Retries are done using
+    an increasing backoff factor.
+    """
+
+    def _internal(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            current_try = 1
+            current_wait = 0.5
+            while current_try <= max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except IntegrityError:
+                    sleep(current_wait)
+                    current_wait *= backoff_factor
+                    current_try += 1
+
+        return wrapper
+
+    return _internal
+
+
+@db_retry()
 def reflect_libraries(db):
     q = sa.select(e.Library)
     libraries = []
@@ -50,6 +78,7 @@ def reflect_libraries(db):
     return libraries
 
 
+@db_retry()
 def reflect_variables(db):
     q = sa.select(e.Variable)
     variables = []
