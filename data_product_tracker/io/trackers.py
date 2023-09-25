@@ -52,14 +52,22 @@ class DataProductTracker:
         path = path.expanduser().resolve()
 
         try:
-            return self._product_map[path]
+            return self._product_map[str(path)]
         except KeyError:
             with self._db as db:
                 q = sa.select(DataProduct).where(DataProduct.path == path)
                 result = db.execute(q).scalar()
 
                 if result is None:
-                    raise
+                    # If nothing, then add a "ghost" dataproduct without
+                    # invocation information.
+                    result = DataProduct(
+                        path=path,
+                        invocation_id=None,
+                    )
+                    result.calculate_hash(raise_=False)
+                    db.add(result)
+                    db.commit()
 
                 self._product_map[str(result.path)] = result
             return result

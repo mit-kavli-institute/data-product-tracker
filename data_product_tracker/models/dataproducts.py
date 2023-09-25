@@ -20,7 +20,9 @@ class DataProductHierarchy(base.Base, base.CreatedOnMixin):
 class DataProduct(base.Base, base.CreatedOnMixin):
     __tablename__ = "data_products"
 
-    invocation_id = Column(BigInteger, ForeignKey("invocations.id"))
+    invocation_id = Column(
+        BigInteger, ForeignKey("invocations.id"), nullable=True
+    )
     mmh3_hash = Column(BigInteger)
     _path = Column("path", String(256))
 
@@ -65,5 +67,12 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     def path(cls):
         return cls._path
 
-    def calculate_hash(self):
-        raise NotImplementedError
+    def calculate_hash(self, raise_=False):
+        try:
+            with open(self.path, "rb") as fin:
+                hash_val = mmh3.hash64(fin.read())
+            self.mmh3_hash = hash_val
+        except (FileNotFoundError, OSError):
+            self.mmh3_hash = None
+            if raise_:
+                raise
