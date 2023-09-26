@@ -76,3 +76,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
             self.mmh3_hash = None
             if raise_:
                 raise
+
+    @hybrid_property
+    def hash_str(self):
+        return hex(self.mmh3_hash)
