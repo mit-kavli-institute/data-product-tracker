@@ -41,7 +41,7 @@ setup(
     ),
     entry_points={
         "console_scripts": [
-            "data_product_tracker=data_product_tracker.cli:main",
+            "dpt=data_product_tracker.cli:dpt",
         ],
     },
     install_requires=requirements,

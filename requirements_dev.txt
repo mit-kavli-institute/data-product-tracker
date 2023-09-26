@@ -20,3 +20,4 @@ deal
 mmh3
 pytest-mock
 deal
+tabulate
