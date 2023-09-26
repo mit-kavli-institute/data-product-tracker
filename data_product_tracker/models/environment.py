@@ -1,8 +1,8 @@
 import functools
 import os
+from importlib.metadata import distributions
 from socket import gethostname
 
-import pkg_resources
 import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
@@ -147,34 +147,32 @@ class Library(base.Base, base.CreatedOnMixin):
         q = cls.select()
         libraries = []
         filters = []
-        for package in pkg_resources.working_set:
+        for distribution in distributions():
             filters.append(
                 sa.and_(
-                    cls.name == package.name,
-                    cls.version == package.version,
-                    cls.location == package.path,
+                    cls.name == distribution.metadata["Name"],
+                    cls.version == distribution.version,
                 )
             )
         q = q.where(functools.reduce(sa.or_, filters))
         with db:
             hits = {lib: lib for lib in db.execute(q).scalars()}
-            if len(hits) == len(pkg_resources.working_set):
+            if len(hits) == len(list(distributions())):
                 # Short circuit and return all found libraries
                 return list(hits.values())
 
-            for package in pkg_resources.working_set:
-                key = (package.name, package.version, package.path)
+            for distribution in distributions():
+                key = (distribution.metadata["Name"], distribution.version)
                 if key not in hits:
                     library = cls(
-                        name=package.name,
-                        version=package.version,
-                        location=package.path,
+                        name=distribution.metadata["Name"],
+                        version=distribution.version,
                     )
                     db.add(library)
                 else:
                     library = hits[key]
 
-                libraries.append()
+                libraries.append(library)
             db.commit()
 
         return libraries

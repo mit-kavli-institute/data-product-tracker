@@ -1,10 +1,13 @@
 import os
 import socket
+from functools import wraps
+from time import sleep
 
-import pkg_resources
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 
 from data_product_tracker.exceptions import ModelDoesNotExist
+from data_product_tracker.libraries import yield_distributions_used
 from data_product_tracker.models import environment as e
 
 
@@ -19,37 +22,63 @@ def get_os_environ_filter_clause():
 
 def get_library_filter_clause():
     filters = []
-    for package in pkg_resources.working_set:
+    for distribution in yield_distributions_used():
         clause = sa.and_(
-            e.Library.name == package.key,
-            e.Library.version == package.version,
+            e.Library.name == distribution.metadata["Name"],
+            e.Library.version == distribution.version,
         )
         filters.append(clause)
     return sa.or_(*filters)
 
 
+def db_retry(max_retries=10, backoff_factor=2):
+    """
+    Wrap a function to retry a database operation. Retries are done using
+    an increasing backoff factor.
+    """
+
+    def _internal(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            current_try = 1
+            current_wait = 0.5
+            while current_try <= max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except IntegrityError:
+                    sleep(current_wait)
+                    current_wait *= backoff_factor
+                    current_try += 1
+
+        return wrapper
+
+    return _internal
+
+
+@db_retry()
 def reflect_libraries(db):
     q = sa.select(e.Library)
-    libraries = []
+    libraries = set()
     with db:
-        for package in pkg_resources.working_set:
+        for distribution in yield_distributions_used():
             library_q = q.where(
-                e.Library.name == package.key,
-                e.Library.version == package.version,
+                e.Library.name == distribution.metadata["Name"],
+                e.Library.version == distribution.version,
             )
             library = db.execute(library_q).scalar()
             if library is None:
                 library = e.Library(
-                    name=package.key,
-                    version=package.version,
+                    name=distribution.metadata["Name"],
+                    version=distribution.version,
                 )
                 db.add(library)
                 db.flush()
-            libraries.append(library.id)
+            libraries.add(library.id)
         db.commit()
     return libraries
 
 
+@db_retry()
 def reflect_variables(db):
     q = sa.select(e.Variable)
     variables = []
@@ -82,7 +111,7 @@ def get_environment(db) -> int:
     library_subq = sa.select(e.Library.id).where(libraries_filter)
     variable_subq = sa.select(e.Variable.id).where(variables_filter)
 
-    n_pkgs = len([_ for _ in pkg_resources.working_set])
+    n_pkgs = len(list(yield_distributions_used()))
     q = (
         sa.select(e.LibraryEnvironmentMap.environment_id)
         .join(

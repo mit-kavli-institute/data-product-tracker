@@ -31,6 +31,9 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     description=(
         "An interface to track various data products and their dependencies "
@@ -53,6 +56,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/WilliamCFong/data_product_tracker",
-    version="0.1.1",
+    version="0.1.4",
     zip_safe=False,
 )

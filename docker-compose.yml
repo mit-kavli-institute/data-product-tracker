@@ -2,10 +2,11 @@ version: '3.9'
 services:
   db:
     image: postgres:14.4
+    environment:
+      - POSTGRES_PASSWORD=secrets
+      - POSTGRES_USER=williamfong
     ports:
       - "5432:5432"
-    env_file:
-      - .env
   test_runner:
     build:
       context: .

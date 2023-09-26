@@ -2,8 +2,10 @@ import inspect
 import pathlib
 from itertools import chain
 
+import deal
 import sqlalchemy as sa
 
+from data_product_tracker import contracts
 from data_product_tracker.conn import db
 from data_product_tracker.models.dataproducts import (
     DataProduct,
@@ -16,10 +18,8 @@ from data_product_tracker.reflection import get_or_create_env
 class DataProductTracker:
     def __init__(self):
         self.assign_db(db)
-        self._product_map = {}
-        self._invocation_cache = {}
-        self._variable_cache: dict[int, int] = {}
         self.env_id = None
+        self.dump_cache()
 
     def assign_db(self, database):
         """
@@ -27,6 +27,16 @@ class DataProductTracker:
         """
         self._db = database
 
+    @deal.ensure(contracts.empty_caches)
+    def dump_cache(self):
+        """
+        Removes all cache references to an empty dictionary.
+        """
+        self._product_map: dict[str | pathlib.Path, int] = {}
+        self._invocation_cache = {}
+        self._variable_cache: dict[int, int] = {}
+
+    @deal.ensure(contracts.environment_exists)
     def resolve_environment(self):
         """
         Get or create the current environment id.
@@ -37,19 +47,23 @@ class DataProductTracker:
 
         return self.env_id
 
-    def resolve_dataproduct(self, path):
+    @deal.ensure(contracts.dataproduct_exists)
+    def resolve_dataproduct(self, path) -> int:
         """
         Attempt to resolve the given path to an existing dataproduct.
         """
-        if not isinstance(path, pathlib.Path):
-            try:
-                path = pathlib.Path(path)
-            except AttributeError:
-                raise RuntimeError(
-                    f"{path} could not be resolved to a resource on disk."
-                )
+        if isinstance(path, str):
+            path = pathlib.Path(path)
 
-        path = path.expanduser().resolve()
+        elif not isinstance(path, pathlib.Path):
+            try:
+                path = pathlib.Path(path.name)
+            except AttributeError:
+                # Final catch is resolving by casting to str
+                path = str(path)
+
+        # Finally cast everything back to a Path
+        path = pathlib.Path(path).expanduser().resolve()
 
         try:
             return self._product_map[str(path)]
@@ -72,6 +86,7 @@ class DataProductTracker:
                 self._product_map[str(result.path)] = result
             return result
 
+    @deal.ensure(contracts.invocation_exists)
     def resolve_invocation(self, invocation_stack):
         """
         Resolve the invocation using the provided callstack. It is assumed
@@ -117,8 +132,31 @@ class DataProductTracker:
                 continue
         return ids
 
+    @deal.ensure(contracts.variables_associated_with_file)
     def associate_variables(self, target_file, *variables):
-        product_id = self.resolve_dataproduct(target_file).id
+        """
+        For the given target file, associate the memory pointer locations of
+        each passed variable reference.
+
+        Each of these pointer locations can then be used as a hint to resolve
+        the passed file later in time.
+
+        Parameters
+        ----------
+        target_file: Union[str, os.PathLike, io.FileIO]
+            The file to be assoicated with the passed variables
+        variables: Any
+            The variables to associate with the file. The memory addresses
+            of the variable will be used. If the memory location changes
+            or crosses process memory boundaries this reference will be
+            unreliable.
+
+        Notes
+        -----
+        This method is a quality of life hint. It cannot preserve pointer
+        locations across multiprocess boundaries or manual deletion.
+        """
+        product_id = self.resolve_dataproduct(target_file)
         for variable in variables:
             self._variable_cache[id(variable)] = product_id
 
@@ -164,15 +202,16 @@ class DataProductTracker:
             db.add(dp)
             db.commit()  # Emit SQL and return assigned id
             child_id = dp.id
+            child_path = dp.path
 
             # Determine relationships
             relationships = []
             variables = [] if variable_hints is None else variable_hints
             parents = [] if parents is None else parents
-            parents = [self.resolve_dataproduct(p).id for p in parents]
+            parent_ids = [self.resolve_dataproduct(p) for p in parents]
 
             variable_ids = self.resolve_variable_hints(*variables)
-            for parent_id in set(chain(variable_ids, parents)):
+            for parent_id in set(chain(variable_ids, parent_ids)):
                 rel = {
                     "parent_id": parent_id,
                     "child_id": child_id,
@@ -180,7 +219,7 @@ class DataProductTracker:
                 relationships.append(rel)
             db.bulk_insert_mappings(DataProductHierarchy, relationships)
             db.commit()
-            self._product_map[str(dp.path)] = dp
+            self._product_map[child_path] = child_id
 
             return dp
 
