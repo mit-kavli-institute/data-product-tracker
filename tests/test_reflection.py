@@ -71,17 +71,53 @@ def test_library_filter():
 def test_reflection_of_environment():
     with database_obj() as db:
         env_id, _ = get_or_create_env(db)
-        library_ref = {
-            dist.metadata["Name"]: dist.version
-            for dist in yield_distributions_used()
-        }
         q = sa.select(e.Environment).where(e.Environment.id == env_id)
         environment = db.execute(q).scalars().first()
-        for variable in environment.variables:
-            assert variable.value == os.environ[variable.key]
+        for k, v in os.environ.items():
+            q = (
+                sa.select(e.Variable)
+                .join(
+                    e.VariableEnvironmentMap,
+                    e.VariableEnvironmentMap.variable_id == e.Variable.id,
+                )
+                .where(
+                    e.VariableEnvironmentMap.environment_id == env_id,
+                    e.Variable.key == k,
+                    e.Variable.value == v,
+                )
+            )
+            variable = db.scalar(q)
+            try:
+                assert variable is not None
+            except AssertionError:
+                print(f"{k}: '{v}' not reflected!")
+                raise
 
-        for library in environment.libraries:
-            assert library.version == library_ref[library.name]
+        assert len(environment.variables) == len(os.environ)
+
+        for distribution in yield_distributions_used():
+            q = (
+                sa.select(e.Library)
+                .join(
+                    e.LibraryEnvironmentMap,
+                    e.LibraryEnvironmentMap.library_id == e.Library.id,
+                )
+                .where(
+                    e.LibraryEnvironmentMap.environment_id == env_id,
+                    e.Library.name == distribution.metadata["Name"],
+                    e.Library.version == distribution.version,
+                )
+            )
+            library = db.scalar(q)
+            try:
+                assert library is not None
+            except AssertionError:
+                print(f"Could not find distribution {distribution}")
+                raise
+
+        assert len(environment.libraries) == len(
+            list(yield_distributions_used())
+        )
 
 
 def test_non_duplication_of_envs():

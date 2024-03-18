@@ -8,6 +8,7 @@ from sqlalchemy import (
     BigInteger,
     Column,
     ForeignKey,
+    Index,
     String,
     Text,
     UniqueConstraint,
@@ -43,7 +44,10 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
         BigInteger, ForeignKey("variables.id"), nullable=False
     )
 
-    __table_args__ = (UniqueConstraint("environment_id", "variable_id"),)
+    __table_args__ = (
+        UniqueConstraint("environment_id", "variable_id"),
+        Index("idx_variable_id", "variable_id"),
+    )
 
     def __repr__(self):
         return (

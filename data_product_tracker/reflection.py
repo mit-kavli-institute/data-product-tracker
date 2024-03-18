@@ -97,39 +97,57 @@ def reflect_variables(db):
     return variables
 
 
-def get_environment(db) -> int:
-    variables_filter = get_os_environ_filter_clause()
-    libraries_filter = get_library_filter_clause()
-
-    library_count = sa.func.count(
-        e.LibraryEnvironmentMap.library_id.distinct()
-    )
-    variable_count = sa.func.count(
-        e.VariableEnvironmentMap.variable_id.distinct()
-    )
-
-    library_subq = sa.select(e.Library.id).where(libraries_filter)
-    variable_subq = sa.select(e.Variable.id).where(variables_filter)
-
-    n_pkgs = len(list(yield_distributions_used()))
+@db_retry()
+def get_matching_env_by_variables(db) -> set[int]:
     q = (
-        sa.select(e.LibraryEnvironmentMap.environment_id)
+        sa.select(e.VariableEnvironmentMap.environment_id)
         .join(
-            e.VariableEnvironmentMap,
-            e.LibraryEnvironmentMap.environment_id
-            == e.VariableEnvironmentMap.environment_id,
+            e.Variable, e.Variable.id == e.VariableEnvironmentMap.variable_id
         )
-        .where(e.VariableEnvironmentMap.variable_id.in_(variable_subq))
-        .where(e.LibraryEnvironmentMap.library_id.in_(library_subq))
-        .group_by(e.LibraryEnvironmentMap.environment_id)
-        .having(library_count == n_pkgs, variable_count == len(os.environ))
+        .where(get_os_environ_filter_clause())
+        .group_by(e.VariableEnvironmentMap.environment_id)
+        .having(
+            sa.func.count(e.VariableEnvironmentMap.variable_id)
+            == len(os.environ)
+        )
     )
 
     with db:
-        env_id = db.execute(q).scalar()
-        if env_id is None:
-            raise ModelDoesNotExist(e.Environment)
-        return env_id
+        return set(db.scalars(q).fetchall())
+
+
+@db_retry()
+def get_matching_env_by_libraries(db) -> set[int]:
+    q = (
+        sa.select(e.LibraryEnvironmentMap.environment_id)
+        .join(e.Library, e.Library.id == e.LibraryEnvironmentMap.library_id)
+        .where(get_library_filter_clause())
+        .group_by(e.LibraryEnvironmentMap.environment_id)
+        .having(
+            sa.func.count(e.LibraryEnvironmentMap.library_id)
+            == len(list(yield_distributions_used()))
+        )
+    )
+
+    with db:
+        return set(db.scalars(q).fetchall())
+
+
+def get_environment(db) -> int:
+
+    env_ids = list(
+        get_matching_env_by_libraries(db) & get_matching_env_by_variables(db)
+    )
+    with db:
+        q = sa.select(e.Environment.id).where(
+            e.Environment.id.in_(env_ids),
+            e.Environment.host == socket.gethostname(),
+        )
+        env_id = db.scalar(q)
+
+    if env_id is None:
+        raise ModelDoesNotExist(e.Environment)
+    return env_id
 
 
 def get_or_create_env(db) -> tuple[int, bool]:
