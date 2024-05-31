@@ -274,3 +274,5 @@ cython_debug/
 docker_runner*
 *env
 alembic.ini
+*.json
+pythondev
