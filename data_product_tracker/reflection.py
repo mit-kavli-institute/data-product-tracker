@@ -100,36 +100,32 @@ def reflect_variables(db):
 def get_environment(db) -> int:
     variables_filter = get_os_environ_filter_clause()
     libraries_filter = get_library_filter_clause()
-
-    library_count = sa.func.count(
-        e.LibraryEnvironmentMap.library_id.distinct()
-    )
-    variable_count = sa.func.count(
-        e.VariableEnvironmentMap.variable_id.distinct()
-    )
-
-    library_subq = sa.select(e.Library.id).where(libraries_filter)
-    variable_subq = sa.select(e.Variable.id).where(variables_filter)
-
+    VEM = e.VariableEnvironmentMap
+    LEM = e.LibraryEnvironmentMap
     n_pkgs = len([_ for _ in pkg_resources.working_set])
-    q = (
-        sa.select(e.LibraryEnvironmentMap.environment_id)
-        .join(
-            e.VariableEnvironmentMap,
-            e.LibraryEnvironmentMap.environment_id
-            == e.VariableEnvironmentMap.environment_id,
-        )
-        .where(e.VariableEnvironmentMap.variable_id.in_(variable_subq))
-        .where(e.LibraryEnvironmentMap.library_id.in_(library_subq))
-        .group_by(e.LibraryEnvironmentMap.environment_id)
-        .having(library_count == n_pkgs, variable_count == len(os.environ))
+
+    viable_variable_env_ids = db.scalars(
+        sa.select(VEM.environment_id)
+        .join(e.Variable, VEM.variable_id == e.Variable.id)
+        .group_by(VEM.environment_id)
+        .where(variables_filter)
+        .having(sa.func.count(VEM.variable_id) == len(os.environ))
     )
 
-    with db:
-        env_id = db.execute(q).scalar()
-        if env_id is None:
-            raise ModelDoesNotExist(e.Environment)
-        return env_id
+    viable_library_env_ids = db.scalars(
+        sa.select(LEM.environment_id)
+        .join(e.Library, LEM.library_id == e.Library.id)
+        .group_by(LEM.environment_id)
+        .where(libraries_filter)
+        .having(sa.func.count(LEM.library_id) == n_pkgs)
+    )
+
+    viable_env_ids = set(viable_variable_env_ids) & set(viable_library_env_ids)
+    if len(viable_env_ids) == 0:
+        raise ModelDoesNotExist(e.Environment)
+
+    # Odd, possible duplicate environments, return the 'lowest' environment
+    return sorted(viable_env_ids)[0]
 
 
 def get_or_create_env(db) -> tuple[int, bool]:
