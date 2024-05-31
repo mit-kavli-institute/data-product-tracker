@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_product_tracker"
-version = "0.1.4a"
+version = "0.1.4"
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
@@ -39,6 +39,7 @@ dev = [
 ]
 
 [tool.mypy]
+disable_error_code = "import-untyped"
 plugins = "sqlalchemy.ext.mypy.plugin"
 
 
