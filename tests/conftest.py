@@ -28,7 +28,13 @@ def db_session(postgresql):
     Base.metadata.create_all(bind=engine, checkfirst=True)
 
     Session.configure(bind=engine)
-    yield Session()
+
+    sess = Session()
+
+    try:
+        yield sess
+    finally:
+        sess.close_all()
 
 
 def ensure_directory(path: pathlib.Path):
