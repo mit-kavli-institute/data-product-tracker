@@ -2,7 +2,7 @@ import sys
 from getpass import getuser
 
 import sqlalchemy as sa
-from sqlalchemy import BigInteger, Column, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from data_product_tracker.models import base
 
@@ -10,11 +10,13 @@ from data_product_tracker.models import base
 class Invocation(base.Base, base.CreatedOnMixin):
     __tablename__ = "invocations"
 
-    user = Column(String(128), default=getuser)
-    function = Column(String(128))
-    environment_id = Column(BigInteger, ForeignKey("environments.id"))
+    user: Mapped[str] = mapped_column(sa.String(128), default=getuser)
+    function: Mapped[str] = mapped_column(sa.String(128))
+    environment_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("environments.id")
+    )
 
-    command = Column(sa.Text())
+    command: Mapped[str]
 
     def __repr__(self):
         return f"<Invocation {self.id}: {self.function}() from {self.command}>"

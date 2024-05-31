@@ -4,15 +4,7 @@ from socket import gethostname
 
 import pkg_resources
 import sqlalchemy as sa
-from sqlalchemy import (
-    BigInteger,
-    Column,
-    ForeignKey,
-    String,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from data_product_tracker.models import base
 
@@ -20,13 +12,13 @@ from data_product_tracker.models import base
 class Environment(base.Base, base.CreatedOnMixin):
     __tablename__ = "environments"
 
-    host = Column(String(64), default=gethostname, nullable=False)
-    variables = relationship(
+    host: Mapped[str] = mapped_column(sa.String(64), default=gethostname)
+    variables: Mapped[list["Variable"]] = relationship(
         "Variable",
         back_populates="environments",
         secondary="variable_environment_mappings",
     )
-    libraries = relationship(
+    libraries: Mapped[list["Library"]] = relationship(
         "Library",
         back_populates="environments",
         secondary="library_environment_mappings",
@@ -36,14 +28,14 @@ class Environment(base.Base, base.CreatedOnMixin):
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "variable_environment_mappings"
 
-    environment_id = Column(
-        BigInteger, ForeignKey(Environment.id), nullable=False
+    environment_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey(Environment.id)
     )
-    variable_id = Column(
-        BigInteger, ForeignKey("variables.id"), nullable=False
+    variable_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("variables.id")
     )
 
-    __table_args__ = (UniqueConstraint("environment_id", "variable_id"),)
+    __table_args__ = (sa.UniqueConstraint("environment_id", "variable_id"),)
 
     def __repr__(self):
         return (
@@ -56,11 +48,13 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "library_environment_mappings"
 
-    environment_id = Column(
-        BigInteger, ForeignKey(Environment.id), nullable=False
+    environment_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey(Environment.id)
     )
-    library_id = Column(BigInteger, ForeignKey("libraries.id"), nullable=False)
-    __table_args__ = (UniqueConstraint("environment_id", "library_id"),)
+    library_id: Mapped[int] = mapped_column(
+        sa.BigInteger, sa.ForeignKey("libraries.id")
+    )
+    __table_args__ = (sa.UniqueConstraint("environment_id", "library_id"),)
 
     def __repr__(self):
         return (
@@ -73,18 +67,18 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
 class Variable(base.Base, base.CreatedOnMixin):
     __tablename__ = "variables"
 
-    key = Column(String(64), nullable=False)
-    value = Column(Text(), nullable=False)
+    key: Mapped[str] = mapped_column(sa.String(64))
+    value: Mapped[str]
     environments = relationship(
         "Environment",
         back_populates="variables",
         secondary="variable_environment_mappings",
     )
 
-    __table_args__ = (UniqueConstraint("key", "value"),)
+    __table_args__ = (sa.UniqueConstraint("key", "value"),)
 
     def __hash__(self):
-        return hash(self.key, self.value)
+        return hash((self.key, self.value))
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -107,6 +101,7 @@ class Variable(base.Base, base.CreatedOnMixin):
 
             for row in os.environ.items():
                 if row not in hits:
+                    key, value = row
                     variable = cls(
                         key=key,
                         value=value,
@@ -124,18 +119,18 @@ class Variable(base.Base, base.CreatedOnMixin):
 class Library(base.Base, base.CreatedOnMixin):
     __tablename__ = "libraries"
 
-    name = Column(String(64), nullable=False)
-    version = Column(String(64), nullable=False)
-    environments = relationship(
+    name: Mapped[str] = mapped_column(sa.String(64))
+    version: Mapped[str] = mapped_column(sa.String(64))
+    environments: Mapped[list["Environment"]] = relationship(
         "Environment",
         back_populates="libraries",
         secondary="library_environment_mappings",
     )
 
-    __table_args__ = (UniqueConstraint("name", "version"),)
+    __table_args__ = (sa.UniqueConstraint("name", "version"),)
 
     def __hash__(self):
-        return hash(self.name, self.version)
+        return hash((self.name, self.version))
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
