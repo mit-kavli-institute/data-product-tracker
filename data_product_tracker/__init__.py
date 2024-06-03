@@ -2,7 +2,7 @@
 
 __author__ = """William Christopher Fong"""
 __email__ = "willfong@mit.edu"
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 from data_product_tracker import sql as _sql  # noqa F401

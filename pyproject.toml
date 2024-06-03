@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_product_tracker"
-version = "0.1.4"
+version = "0.1.5"
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
