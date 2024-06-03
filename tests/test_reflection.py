@@ -1,8 +1,8 @@
 import os
 
-import pkg_resources
 import sqlalchemy as sa
 
+from data_product_tracker.libraries import yield_distributions_used
 from data_product_tracker.models import environment as e
 from data_product_tracker.reflection import (
     get_library_filter_clause,
@@ -29,13 +29,14 @@ def test_reflection_of_variables(db_session):
 def test_reflection_of_libraries(db_session):
     reflect_libraries(db_session)
     library_q = sa.select(e.Library)
-    for i, pkg in enumerate(pkg_resources.working_set, start=1):
+    for i, pkg in enumerate(yield_distributions_used(), start=1):
         q = library_q.where(
-            e.Library.name == pkg.key, e.Library.version == pkg.version
+            e.Library.name == pkg.metadata["Name"],
+            e.Library.version == pkg.version,
         )
         library = db_session.execute(q).scalar()
         assert library is not None
-        assert library.name == pkg.key
+        assert library.name == pkg.metadata["Name"]
         assert library.version == pkg.version
     count = db_session.execute(sa.func.count(e.Library.id)).scalar()
     assert count == i
@@ -59,13 +60,15 @@ def test_library_filter(db_session):
     for library in libraries:
         remote[(library.name, library.version)] = library.id
 
-    for pkg in pkg_resources.working_set:
-        assert (pkg.key, pkg.version) in remote
+    for pkg in yield_distributions_used():
+        assert (pkg.metadata["Name"], pkg.version) in remote
 
 
 def test_reflection_of_environment(db_session):
     env_id, _ = get_or_create_env(db_session)
-    library_ref = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
+    library_ref = {
+        pkg.metadata["Name"]: pkg.version for pkg in yield_distributions_used()
+    }
     q = sa.select(e.Environment).where(e.Environment.id == env_id)
     environment = db_session.execute(q).scalars().first()
     for variable in environment.variables:
@@ -86,7 +89,7 @@ def test_non_duplication_of_envs(db_session):
         assert not created
         assert env_id_1 == env_id_2
     except AssertionError:
-        n_pkgs = len([_ for _ in pkg_resources.working_set])
+        n_pkgs = len([_ for _ in yield_distributions_used()])
         library_count = sa.func.count(
             e.LibraryEnvironmentMap.library_id.distinct()
         )
@@ -115,10 +118,11 @@ def test_non_duplication_of_envs(db_session):
         print(db_session.execute(raw_q).all())
         print(q.compile(compile_kwargs={"literal_binds": True}))
         print("Library Diff")
-        for i, pkg in enumerate(pkg_resources.working_set):
+        for i, pkg in enumerate(yield_distributions_used()):
             lib_q = sa.select(e.Library.id).where(
-                e.Library.name == pkg.key, e.Library.version == pkg.version
+                e.Library.name == pkg.metadata["Name"],
+                e.Library.version == pkg.version,
             )
             hit = db_session.execute(lib_q).first()
-            print(f"{i:02} | {pkg.key}:{pkg.version} -> {hit}")
+            print(f"{i:02} | {pkg.metadata['Name']}:{pkg.version} -> {hit}")
         raise

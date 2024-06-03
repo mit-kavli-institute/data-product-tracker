@@ -3,11 +3,11 @@ import socket
 from functools import wraps
 from time import sleep
 
-import pkg_resources
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from data_product_tracker.exceptions import ModelDoesNotExist
+from data_product_tracker.libraries import yield_distributions_used
 from data_product_tracker.models import environment as e
 
 
@@ -22,10 +22,10 @@ def get_os_environ_filter_clause():
 
 def get_library_filter_clause():
     filters = []
-    for package in pkg_resources.working_set:
+    for distribution in yield_distributions_used():
         clause = sa.and_(
-            e.Library.name == package.key,
-            e.Library.version == package.version,
+            e.Library.name == distribution.metadata["Name"],
+            e.Library.version == distribution.version,
         )
         filters.append(clause)
     return sa.or_(*filters)
@@ -58,22 +58,22 @@ def db_retry(max_retries=10, backoff_factor=2):
 @db_retry()
 def reflect_libraries(db):
     q = sa.select(e.Library)
-    libraries = []
+    libraries = set()
     with db:
-        for package in pkg_resources.working_set:
+        for distribution in yield_distributions_used():
             library_q = q.where(
-                e.Library.name == package.key,
-                e.Library.version == package.version,
+                e.Library.name == distribution.metadata["Name"],
+                e.Library.version == distribution.version,
             )
             library = db.execute(library_q).scalar()
             if library is None:
                 library = e.Library(
-                    name=package.key,
-                    version=package.version,
+                    name=distribution.metadata["Name"],
+                    version=distribution.version,
                 )
                 db.add(library)
                 db.flush()
-            libraries.append(library.id)
+            libraries.add(library.id)
         db.commit()
     return libraries
 
@@ -97,35 +97,53 @@ def reflect_variables(db):
     return variables
 
 
-def get_environment(db) -> int:
-    variables_filter = get_os_environ_filter_clause()
-    libraries_filter = get_library_filter_clause()
+@db_retry()
+def get_matching_env_by_variables(db) -> set[int]:
     VEM = e.VariableEnvironmentMap
-    LEM = e.LibraryEnvironmentMap
-    n_pkgs = len([_ for _ in pkg_resources.working_set])
-
-    viable_variable_env_ids = db.scalars(
+    q = (
         sa.select(VEM.environment_id)
-        .join(e.Variable, VEM.variable_id == e.Variable.id)
+        .join(e.Variable, e.Variable.id == VEM.variable_id)
+        .where(get_os_environ_filter_clause())
         .group_by(VEM.environment_id)
-        .where(variables_filter)
         .having(sa.func.count(VEM.variable_id) == len(os.environ))
     )
 
-    viable_library_env_ids = db.scalars(
-        sa.select(LEM.environment_id)
-        .join(e.Library, LEM.library_id == e.Library.id)
-        .group_by(LEM.environment_id)
-        .where(libraries_filter)
-        .having(sa.func.count(LEM.library_id) == n_pkgs)
+    with db:
+        return set(db.scalars(q).fetchall())
+
+
+@db_retry()
+def get_matching_env_by_libraries(db) -> set[int]:
+    q = (
+        sa.select(e.LibraryEnvironmentMap.environment_id)
+        .join(e.Library, e.Library.id == e.LibraryEnvironmentMap.library_id)
+        .where(get_library_filter_clause())
+        .group_by(e.LibraryEnvironmentMap.environment_id)
+        .having(
+            sa.func.count(e.LibraryEnvironmentMap.library_id)
+            == len(list(yield_distributions_used()))
+        )
     )
 
-    viable_env_ids = set(viable_variable_env_ids) & set(viable_library_env_ids)
-    if len(viable_env_ids) == 0:
-        raise ModelDoesNotExist(e.Environment)
+    with db:
+        return set(db.scalars(q).fetchall())
 
-    # Odd, possible duplicate environments, return the 'lowest' environment
-    return sorted(viable_env_ids)[0]
+
+def get_environment(db) -> int:
+
+    env_ids = list(
+        get_matching_env_by_libraries(db) & get_matching_env_by_variables(db)
+    )
+    with db:
+        q = sa.select(e.Environment.id).where(
+            e.Environment.id.in_(env_ids),
+            e.Environment.host == socket.gethostname(),
+        )
+        env_id = db.scalar(q)
+
+    if env_id is None:
+        raise ModelDoesNotExist(e.Environment)
+    return env_id
 
 
 def get_or_create_env(db) -> tuple[int, bool]:
