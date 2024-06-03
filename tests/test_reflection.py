@@ -1,7 +1,7 @@
 import os
 
 import sqlalchemy as sa
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, note, settings
 
 from data_product_tracker.libraries import Distribution, yield_distributions
 from data_product_tracker.models import environment as e
@@ -63,18 +63,29 @@ def test_reflection_of_libraries(db_session, distribution: Distribution):
 @given(dpt_st.environs(), dpt_st.library_installations())
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_reflection_of_environment(db_session, environ, distributions):
-    env_id, _ = get_or_create_env(db_session)
-    library_ref = {pkg.name: pkg.version for pkg in yield_distributions()}
+    env_id, _ = get_or_create_env(db_session, environ, distributions)
     q = sa.select(e.Environment).where(e.Environment.id == env_id)
     environment = db_session.execute(q).scalars().first()
+
+    assert len(environment.variables) == len(environ)
+    assert len(environment.libraries) == len(distributions)
+
+    note(
+        e.LibraryEnvironmentMap.matching_env_id_q(distributions).compile(
+            compile_kwargs={"literal_binds": True}
+        )
+    )
+
     for variable in environment.variables:
-        assert variable.value == os.environ[variable.key]
+        remote_var = OSVariable(key=variable.key, value=variable.value)
+        assert remote_var in environ
 
     for library in environment.libraries:
-        assert library.version == library_ref[library.name]
+        remote_dis = Distribution(name=library.name, version=library.version)
+        assert remote_dis in distributions
 
 
-def test_non_duplication_of_envs(db_session):
+def test_non_duplication_of_envs_static(db_session):
     env_id_1, created = get_or_create_env(db_session)
 
     assert created
@@ -122,3 +133,17 @@ def test_non_duplication_of_envs(db_session):
             hit = db_session.execute(lib_q).first()
             print(f"{i:02} | {pkg.name}:{pkg.version} -> {hit}")
         raise
+
+
+@given(dpt_st.environs(), dpt_st.library_installations())
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_non_duplication_of_envs(db_session, environ, distributions):
+
+    assume(len(environ) > 0 and len(distributions) > 0)
+
+    env_id_1, _ = get_or_create_env(db_session, environ, distributions)
+
+    env_id_2, created = get_or_create_env(db_session, environ, distributions)
+
+    assert not created
+    assert env_id_1 == env_id_2

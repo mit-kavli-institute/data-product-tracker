@@ -14,7 +14,7 @@ from data_product_tracker.variables import OSVariable
 class Environment(base.Base, base.CreatedOnMixin):
     __tablename__ = "environments"
 
-    host: Mapped[str] = mapped_column(sa.String(64), default=gethostname)
+    host: Mapped[str] = mapped_column(sa.String(), default=gethostname)
     variables: Mapped[list["Variable"]] = relationship(
         "Variable",
         back_populates="environments",
@@ -49,6 +49,17 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
             f"variable_id={self.variable_id})"
         )
 
+    @classmethod
+    def matching_env_id_q(cls, os_variables: list[OSVariable]):
+        q = (
+            sa.select(cls.environment_id)
+            .join(Variable, Variable.id == cls.variable_id)
+            .where(Variable.filter_by_variables(os_variables))
+            .group_by(cls.environment_id)
+            .having(sa.func.count(cls.variable_id) == len(os_variables))
+        )
+        return q
+
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __tablename__ = "library_environment_mappings"
@@ -68,11 +79,22 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
             f"library_id={self.library_id})"
         )
 
+    @classmethod
+    def matching_env_id_q(cls, distributions: list[Distribution]):
+        q = (
+            sa.select(cls.environment_id)
+            .join(Library, Library.id == cls.library_id)
+            .where(Library.filter_by_distributions(distributions))
+            .group_by(cls.environment_id)
+            .having(sa.func.count(cls.library_id) == len(distributions))
+        )
+        return q
+
 
 class Variable(base.Base, base.CreatedOnMixin):
     __tablename__ = "variables"
 
-    key: Mapped[str] = mapped_column(sa.String(64))
+    key: Mapped[str]
     value: Mapped[str]
     environments = relationship(
         "Environment",
@@ -139,8 +161,8 @@ class Variable(base.Base, base.CreatedOnMixin):
 class Library(base.Base, base.CreatedOnMixin):
     __tablename__ = "libraries"
 
-    name: Mapped[str] = mapped_column(sa.String(64))
-    version: Mapped[str] = mapped_column(sa.String(64))
+    name: Mapped[str]
+    version: Mapped[str]
     environments: Mapped[list["Environment"]] = relationship(
         "Environment",
         back_populates="libraries",

@@ -85,38 +85,18 @@ def get_matching_env_by_variables(
     db, os_variables: list[OSVariable]
 ) -> set[int]:
     VEM = e.VariableEnvironmentMap
-    q = (
-        sa.select(VEM.environment_id)
-        .join(e.Variable, e.Variable.id == VEM.variable_id)
-        .where(e.Variable.filter_by_variables(os_variables))
-        .group_by(VEM.environment_id)
-        .having(sa.func.count(VEM.variable_id) == len(os_variables))
-    )
 
     with db:
-        return set(db.scalars(q).fetchall())
+        return set(db.scalars(VEM.matching_env_id_q(os_variables)))
 
 
 @db_retry()
 def get_matching_env_by_libraries(
     db, distributions: list[Distribution]
 ) -> set[int]:
-    q = (
-        sa.select(e.LibraryEnvironmentMap.environment_id)
-        .join(
-            e.Library,
-            e.Library.id == e.LibraryEnvironmentMap.library_id,
-        )
-        .where(e.Library.filter_by_distributions(distributions))
-        .group_by(e.LibraryEnvironmentMap.environment_id)
-        .having(
-            sa.func.count(e.LibraryEnvironmentMap.library_id)
-            == len(distributions)
-        )
-    )
-
+    LEM = e.LibraryEnvironmentMap
     with db:
-        return set(db.scalars(q).fetchall())
+        return set(db.scalars(LEM.matching_env_id_q(distributions)))
 
 
 def get_environment(
@@ -125,13 +105,17 @@ def get_environment(
     distributions: Iterable[Distribution],
 ) -> int:
 
-    env_ids = list(
+    env_ids = sorted(
         get_matching_env_by_libraries(db, list(distributions))
         & get_matching_env_by_variables(db, list(environ))
     )
+    if len(env_ids) == 0:
+        raise ModelDoesNotExist(e.Environment)
+
+    env_id = env_ids[0]
     with db:
         q = sa.select(e.Environment.id).where(
-            e.Environment.id.in_(env_ids),
+            e.Environment.id == env_id,
             e.Environment.host == socket.gethostname(),
         )
         env_id = db.scalar(q)
