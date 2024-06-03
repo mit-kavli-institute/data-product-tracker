@@ -1,10 +1,20 @@
+import typing
 from importlib import metadata
 
+Distribution = typing.NamedTuple(
+    "Distribution", [("name", str), ("version", str)]
+)
 
-def yield_distributions_used():
+
+def yield_distributions_used() -> (
+    typing.Generator[Distribution, typing.Any, None]
+):
     mask = set()
     for dist in metadata.distributions():
-        if dist.metadata["Name"] in mask:
+        converted = Distribution(
+            name=dist.metadata["Name"], version=dist.version
+        )
+        if converted in mask:
             continue
-        yield dist
-        mask.add(str(dist.metadata["Name"]))
+        yield converted
+        mask.add(converted)

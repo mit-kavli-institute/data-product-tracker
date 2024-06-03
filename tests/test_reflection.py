@@ -31,12 +31,12 @@ def test_reflection_of_libraries(db_session):
     library_q = sa.select(e.Library)
     for i, pkg in enumerate(yield_distributions_used(), start=1):
         q = library_q.where(
-            e.Library.name == pkg.metadata["Name"],
+            e.Library.name == pkg.name,
             e.Library.version == pkg.version,
         )
         library = db_session.execute(q).scalar()
         assert library is not None
-        assert library.name == pkg.metadata["Name"]
+        assert library.name == pkg.name
         assert library.version == pkg.version
     count = db_session.execute(sa.func.count(e.Library.id)).scalar()
     assert count == i
@@ -61,14 +61,12 @@ def test_library_filter(db_session):
         remote[(library.name, library.version)] = library.id
 
     for pkg in yield_distributions_used():
-        assert (pkg.metadata["Name"], pkg.version) in remote
+        assert (pkg.name, pkg.version) in remote
 
 
 def test_reflection_of_environment(db_session):
     env_id, _ = get_or_create_env(db_session)
-    library_ref = {
-        pkg.metadata["Name"]: pkg.version for pkg in yield_distributions_used()
-    }
+    library_ref = {pkg.name: pkg.version for pkg in yield_distributions_used()}
     q = sa.select(e.Environment).where(e.Environment.id == env_id)
     environment = db_session.execute(q).scalars().first()
     for variable in environment.variables:
@@ -120,7 +118,7 @@ def test_non_duplication_of_envs(db_session):
         print("Library Diff")
         for i, pkg in enumerate(yield_distributions_used()):
             lib_q = sa.select(e.Library.id).where(
-                e.Library.name == pkg.metadata["Name"],
+                e.Library.name == pkg.name,
                 e.Library.version == pkg.version,
             )
             hit = db_session.execute(lib_q).first()

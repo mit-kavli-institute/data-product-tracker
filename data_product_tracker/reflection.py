@@ -24,7 +24,7 @@ def get_library_filter_clause():
     filters = []
     for distribution in yield_distributions_used():
         clause = sa.and_(
-            e.Library.name == distribution.metadata["Name"],
+            e.Library.name == distribution.name,
             e.Library.version == distribution.version,
         )
         filters.append(clause)
@@ -62,13 +62,13 @@ def reflect_libraries(db):
     with db:
         for distribution in yield_distributions_used():
             library_q = q.where(
-                e.Library.name == distribution.metadata["Name"],
+                e.Library.name == distribution.name,
                 e.Library.version == distribution.version,
             )
             library = db.execute(library_q).scalar()
             if library is None:
                 library = e.Library(
-                    name=distribution.metadata["Name"],
+                    name=distribution.name,
                     version=distribution.version,
                 )
                 db.add(library)
