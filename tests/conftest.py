@@ -34,7 +34,7 @@ def db_session(postgresql):
     try:
         yield sess
     finally:
-        sess.close_all()
+        sess.close()
 
 
 def ensure_directory(path: pathlib.Path):
