@@ -2,6 +2,7 @@ import pathlib
 import warnings
 
 import configurables as conf
+import sqlalchemy as sa
 from sqlalchemy import create_engine, orm
 from sqlalchemy.pool import NullPool
 
@@ -12,20 +13,33 @@ from sqlalchemy.pool import NullPool
 @conf.option("database_name", default="dataproducttracker")
 @conf.option("database_host", default="localhost")
 @conf.option("database_port", type=int, default=5432)
-def session_from_config(
-    username, password, database_name, database_host, database_port
+def configure_engine(
+    username,
+    password,
+    database_name,
+    database_host,
+    database_port,
+    **engine_kwargs,
 ):
-    engine = create_engine(
-        f"postgresql://{username}:{password}"
-        f"@{database_host}:{database_port}/{database_name}",
-        poolclass=NullPool,
+
+    url = sa.URL.create(
+        "postgresql+psycopg",
+        database=database_name,
+        username=username,
+        password=password,
+        host=database_host,
+        port=database_port,
     )
-    Session = orm.sessionmaker(engine)
-    return Session()
+    engine = create_engine(url, poolclass=NullPool, **engine_kwargs)
+
+    return engine
 
 
 CONFIG_DIR = (pathlib.Path("~") / ".config" / "dpt").expanduser()
 CONFIG_PATH = CONFIG_DIR / "db.conf"
+
+
+Session = orm.sessionmaker(expire_on_commit=False)
 
 
 if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
@@ -35,4 +49,5 @@ if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
     )
     db = None
 else:
-    db = session_from_config(CONFIG_PATH)
+    Session.configure(bind=configure_engine(CONFIG_PATH))
+    db = Session()

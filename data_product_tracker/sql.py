@@ -1,10 +1,13 @@
-import pathlib
+from pathlib import Path
+from typing import Any
 
-from psycopg2.extensions import QuotedString, register_adapter
-
-
-def adapt_pathlib_path(path):
-    return QuotedString(str(path))
+from psycopg import adapters
+from psycopg.adapt import Dumper
 
 
-register_adapter(pathlib.Path, adapt_pathlib_path)
+class PathLibDumper(Dumper):
+    def dump(self, obj: Any):
+        return str(obj).encode("utf-8")
+
+
+adapters.register_dumper(Path, PathLibDumper)

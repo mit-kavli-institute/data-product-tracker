@@ -9,9 +9,11 @@ def unix_viable_character():
 
 
 def unix_filename():
-    return st.text(
-        alphabet=unix_viable_character(), min_size=1, max_size=255
-    ).map(pathlib.Path)
+    return (
+        st.text(alphabet=unix_viable_character(), min_size=1, max_size=255)
+        .filter(lambda t: not t.startswith("/"))
+        .map(pathlib.Path)
+    )
 
 
 def file_paths(
@@ -23,6 +25,6 @@ def file_paths(
             unix_filename(),
         )
     tokens = st.lists(file_system_strategy, min_size=1, max_size=max_depth)
-    return tokens.map(lambda list_: reduce(lambda l, r: l / r, list_)).filter(
-        lambda p: not p.is_dir()
-    )
+    return tokens.map(
+        lambda list_: reduce(lambda left, right: left / right, list_)
+    ).filter(lambda path: not path.is_dir())

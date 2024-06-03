@@ -1,7 +1,57 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data_product_tracker"
+version = "0.1.4"
+description = "An interface to track various data products and their dependencies and environments"
+authors = [{name="William Fong", email="willfong@mit.edu"}]
+readme = "README.rst"
+
+dependencies = [
+    "sqlalchemy>=2.0",
+    "click>=8.0",
+    "psycopg[binary]>=3.1.19",
+    "setuptools>69.5",
+    "deal",
+    "mmh3",
+    "configurables @ git+ssh://git@tessgit.mit.edu/wcfong/configurables.git",
+]
+
+[project.urls]
+Home = "https://tessgit.mit.edu/wcfong/data-product-tracker"
+
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.4",
+    "hypothesis>=6",
+    "hypothesis_fspaths",
+    "mypy==1.10",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-sugar",
+    "pytest-xdist",
+    "pytest>=8.2",
+    "tox>=4",
+    "tox-docker>=4.1.0",
+]
+
+[tool.mypy]
+disable_error_code = "import-untyped"
+plugins = "sqlalchemy.ext.mypy.plugin"
+
+
 [tool.black]
-line-length = 79
+line-length = 80
 
 [tool.isort]
 profile = "black"
-multi_line_output = 3
-line_length = 79
+
+[tool.flake8]
+max-line-length = 81
+
+
+[tool.setuptools]
+py-modules =[]

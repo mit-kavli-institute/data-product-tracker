@@ -1,29 +1,34 @@
+from datetime import datetime
+
 import sqlalchemy as sa
-from sqlalchemy import BigInteger, Column, DateTime, Index, func
-from sqlalchemy.orm import as_declarative, declarative_mixin, declared_attr
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    declared_attr,
+    mapped_column,
+)
 
 
-@as_declarative()
-class Base:
-    id = Column(BigInteger, primary_key=True)
+class Base(DeclarativeBase):
+    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True)
 
     @classmethod
     def select(cls, *attrs: str):
         if len(attrs) > 0:
-            return sa.select([getattr(cls, attr) for attr in attrs])
+            return sa.select(*[getattr(cls, attr) for attr in attrs])
 
         return sa.select(cls)
 
 
-@declarative_mixin
 class CreatedOnMixin:
-    created_on = Column(DateTime, default=func.now())
+    created_on: Mapped[datetime] = mapped_column(default=sa.func.now())
 
-    @declared_attr
+    @declared_attr.directive
     def __table_args__(cls):
+        tablename = getattr(cls, "__tablename__")
         return (
-            Index(
-                f"idx_{cls.__tablename__}_created_on",
+            sa.Index(
+                f"idx_{tablename}_created_on",
                 "created_on",
                 postgresql_using="brin",
             ),
