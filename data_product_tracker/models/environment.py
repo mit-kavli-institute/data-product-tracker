@@ -6,7 +6,9 @@ from socket import gethostname
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from data_product_tracker.libraries import Distribution
 from data_product_tracker.models import base
+from data_product_tracker.variables import OSVariable
 
 
 class Environment(base.Base, base.CreatedOnMixin):
@@ -89,6 +91,21 @@ class Variable(base.Base, base.CreatedOnMixin):
         return other.key == self.key and other.value == self.value
 
     @classmethod
+    def compare_to_variable(
+        cls, os_variable: OSVariable
+    ) -> sa.ColumnElement[bool]:
+        return sa.and_(
+            cls.key == os_variable.key, cls.value == os_variable.value
+        )
+
+    @classmethod
+    def filter_by_variables(
+        cls, os_variables: list[OSVariable]
+    ) -> sa.ColumnElement[bool]:
+        clauses = [cls.compare_to_variable(var) for var in os_variables]
+        return sa.or_(*clauses)
+
+    @classmethod
     def get_os_variables(cls, db):
         q = cls.select()
         variables = []
@@ -141,6 +158,25 @@ class Library(base.Base, base.CreatedOnMixin):
         return self.name == other.name and self.version == other.version
 
     @classmethod
+    def compare_to_distribution(
+        cls, distribution: Distribution
+    ) -> sa.ColumnElement[bool]:
+        return sa.and_(
+            cls.name == distribution.name,
+            cls.version == distribution.version,
+        )
+
+    @classmethod
+    def filter_by_distributions(
+        cls, distributions: list[Distribution]
+    ) -> sa.ColumnElement[bool]:
+        clauses = [
+            cls.compare_to_distribution(distribution)
+            for distribution in distributions
+        ]
+        return sa.or_(*clauses)
+
+    @classmethod
     def get_installed_python_libraries(cls, db):
         q = cls.select()
         libraries = []
@@ -160,7 +196,10 @@ class Library(base.Base, base.CreatedOnMixin):
                 return list(hits.values())
 
             for distribution in distributions():
-                key = (distribution.metadata["Name"], distribution.version)
+                key = (
+                    distribution.metadata["Name"],
+                    distribution.version,
+                )
                 if key not in hits:
                     library = cls(
                         name=distribution.metadata["Name"],

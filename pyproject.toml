@@ -42,7 +42,6 @@ dev = [
 disable_error_code = "import-untyped"
 plugins = "sqlalchemy.ext.mypy.plugin"
 
-
 [tool.black]
 line-length = 80
 
@@ -51,7 +50,6 @@ profile = "black"
 
 [tool.flake8]
 max-line-length = 81
-
 
 [tool.setuptools]
 py-modules =[]

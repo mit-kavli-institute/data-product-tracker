@@ -1,72 +1,70 @@
 import os
 
 import sqlalchemy as sa
+from hypothesis import HealthCheck, given, settings
 
-from data_product_tracker.libraries import yield_distributions_used
+from data_product_tracker.libraries import Distribution, yield_distributions
 from data_product_tracker.models import environment as e
 from data_product_tracker.reflection import (
-    get_library_filter_clause,
     get_or_create_env,
-    get_os_environ_filter_clause,
     reflect_libraries,
     reflect_variables,
 )
+from data_product_tracker.variables import OSVariable
+
+from . import strategies as dpt_st
 
 
-def test_reflection_of_variables(db_session):
-    reflect_variables(db_session)
-    variable_q = sa.select(e.Variable)
-    for k, v in os.environ.items():
-        q = variable_q.where(e.Variable.key == k, e.Variable.value == v)
-        variable = db_session.execute(q).scalar()
-        assert variable is not None
-        assert variable.key == k
-        assert variable.value == v
-    count = db_session.execute(sa.func.count(e.Variable.id)).scalar()
-    assert count == len(os.environ)
+@given(dpt_st.os_variables())
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_reflection_of_variables(db_session, os_variable: OSVariable):
+
+    variable_q = sa.select(e.Variable).where(
+        e.Variable.key == os_variable.key,
+        e.Variable.value == os_variable.value,
+    )
+
+    exist_q = sa.select(variable_q.exists())
+
+    variable_exists = db_session.scalar(exist_q)
+
+    if not variable_exists:
+        reflect_variables(db_session, [os_variable])
+
+    variable = db_session.scalar(variable_q)
+
+    assert variable is not None
+    assert variable.key == os_variable.key
+    assert variable.value == os_variable.value
 
 
-def test_reflection_of_libraries(db_session):
-    reflect_libraries(db_session)
-    library_q = sa.select(e.Library)
-    for i, pkg in enumerate(yield_distributions_used(), start=1):
-        q = library_q.where(
-            e.Library.name == pkg.name,
-            e.Library.version == pkg.version,
-        )
-        library = db_session.execute(q).scalar()
-        assert library is not None
-        assert library.name == pkg.name
-        assert library.version == pkg.version
-    count = db_session.execute(sa.func.count(e.Library.id)).scalar()
-    assert count == i
+@given(dpt_st.distributions())
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_reflection_of_libraries(db_session, distribution: Distribution):
+
+    lib_q = sa.select(e.Library).where(
+        e.Library.name == distribution.name,
+        e.Library.version == distribution.version,
+    )
+
+    exist_q = sa.select(lib_q.exists())
+
+    library_exists = db_session.scalar(exist_q)
+
+    if not library_exists:
+        reflect_libraries(db_session, [distribution])
+    library = db_session.scalar(lib_q)
+
+    assert library is not None
+    assert library.name == distribution.name
+    assert library.version == distribution.version
 
 
-def test_variable_filter(db_session):
-    reflect_variables(db_session)
-    q = sa.select(e.Variable).where(get_os_environ_filter_clause())
-    variables = db_session.execute(q).scalars()
-    remote = {(v.key, v.value): v.id for v in variables}
-
-    for key in os.environ.items():
-        assert key in remote
-
-
-def test_library_filter(db_session):
-    reflect_libraries(db_session)
-    q = sa.select(e.Library).where(get_library_filter_clause())
-    libraries = db_session.execute(q).scalars()
-    remote = {}
-    for library in libraries:
-        remote[(library.name, library.version)] = library.id
-
-    for pkg in yield_distributions_used():
-        assert (pkg.name, pkg.version) in remote
-
-
-def test_reflection_of_environment(db_session):
+@given(dpt_st.environs(), dpt_st.library_installations())
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_reflection_of_environment(db_session, environ, distributions):
     env_id, _ = get_or_create_env(db_session)
-    library_ref = {pkg.name: pkg.version for pkg in yield_distributions_used()}
+    library_ref = {pkg.name: pkg.version for pkg in yield_distributions()}
     q = sa.select(e.Environment).where(e.Environment.id == env_id)
     environment = db_session.execute(q).scalars().first()
     for variable in environment.variables:
@@ -87,7 +85,7 @@ def test_non_duplication_of_envs(db_session):
         assert not created
         assert env_id_1 == env_id_2
     except AssertionError:
-        n_pkgs = len([_ for _ in yield_distributions_used()])
+        n_pkgs = len([_ for _ in yield_distributions()])
         library_count = sa.func.count(
             e.LibraryEnvironmentMap.library_id.distinct()
         )
@@ -116,11 +114,11 @@ def test_non_duplication_of_envs(db_session):
         print(db_session.execute(raw_q).all())
         print(q.compile(compile_kwargs={"literal_binds": True}))
         print("Library Diff")
-        for i, pkg in enumerate(yield_distributions_used()):
+        for i, pkg in enumerate(yield_distributions()):
             lib_q = sa.select(e.Library.id).where(
                 e.Library.name == pkg.name,
                 e.Library.version == pkg.version,
             )
             hit = db_session.execute(lib_q).first()
-            print(f"{i:02} | {pkg.metadata['Name']}:{pkg.version} -> {hit}")
+            print(f"{i:02} | {pkg.name}:{pkg.version} -> {hit}")
         raise

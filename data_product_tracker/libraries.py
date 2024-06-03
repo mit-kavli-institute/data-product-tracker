@@ -6,9 +6,7 @@ Distribution = typing.NamedTuple(
 )
 
 
-def yield_distributions_used() -> (
-    typing.Generator[Distribution, typing.Any, None]
-):
+def yield_distributions() -> typing.Generator[Distribution, typing.Any, None]:
     mask = set()
     for dist in metadata.distributions():
         converted = Distribution(
