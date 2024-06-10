@@ -52,4 +52,4 @@ profile = "black"
 max-line-length = 81
 
 [tool.setuptools]
-py-modules =[]
+py-modules = ["data_product_tracker"]
