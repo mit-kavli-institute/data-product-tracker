@@ -16,7 +16,7 @@ dependencies = [
     "setuptools>69.5",
     "deal",
     "mmh3",
-    "configurables @ git+ssh://git@tessgit.mit.edu/wcfong/configurables.git",
+    "configurables @ git+https://github.com/mit-kavli-institute/configurables.git",
 ]
 
 [project.urls]
