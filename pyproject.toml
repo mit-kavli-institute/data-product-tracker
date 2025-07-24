@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_product_tracker"
-version = "1.0.0"  # Managed by python-semantic-release
+version = "1.0.0-beta.1"  # Managed by python-semantic-release
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
