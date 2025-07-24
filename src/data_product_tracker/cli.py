@@ -1,4 +1,5 @@
 """Console script for data_product_tracker."""
+
 import sys
 
 import click
