@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_product_tracker"
-dynamic = ["version"]
+version = "1.0.0"  # Managed by python-semantic-release
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
@@ -45,10 +45,11 @@ disable_error_code = "import-untyped"
 plugins = "sqlalchemy.ext.mypy.plugin"
 
 [tool.black]
-line-length = 80
+line-length = 79
 
 [tool.isort]
 profile = "black"
+line_length = 79
 
 [tool.flake8]
 max-line-length = 81
@@ -56,21 +57,29 @@ max-line-length = 81
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools_scm]
-write_to = "src/data_product_tracker/_version.py"
-
 [tool.semantic_release]
-version_toml = ["pyproject.toml:tool.setuptools_scm.fallback_version"]
-branch = "master"
-upload_to_repository = true
+version_toml = ["pyproject.toml:project.version"]
+version_variable = ["src/data_product_tracker/__init__.py:__version__"]
+branch = "main"
+upload_to_pypi = false
 upload_to_release = true
-build_command = "python -m build"
-commit_version_number = true
-tag_commit = true
-version_source = "tag"
+build_command = "pip install build && python -m build"
+commit_parser = "angular"
+major_on_zero = false
+tag_format = "v{version}"
 commit_message = "chore: release {version}\n\n{changelog}"
+
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+prerelease_token = "rc"
+prerelease = false
 
 [tool.semantic_release.branches.staging]
 match = "staging"
 prerelease = true
 prerelease_token = "beta"
+
+[tool.semantic_release.commit_parser_options]
+allowed_types = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
+minor_types = ["feat"]
+patch_types = ["fix", "perf", "refactor", "build", "chore", "ci", "docs", "style", "test"]
