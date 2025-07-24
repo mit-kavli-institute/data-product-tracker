@@ -53,8 +53,11 @@ profile = "black"
 [tool.flake8]
 max-line-length = 81
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools_scm]
-write_to = "data_product_tracker/_version.py"
+write_to = "src/data_product_tracker/_version.py"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:tool.setuptools_scm.fallback_version"]

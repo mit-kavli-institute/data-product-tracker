@@ -19,7 +19,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testing
-          POSTGRES_DB: postgres
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -36,6 +36,23 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Configure SSH for private dependencies
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -t rsa tessgit.mit.edu >> ~/.ssh/known_hosts
+
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -44,12 +61,28 @@ jobs:
     - name: Test with tox
       run: tox
       env:
+        DATABASE_URL: postgresql://postgres:testing@localhost:5432/test_db
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: htmlcov/
       if: always()
+
+    - name: Generate coverage XML
+      run: |
+        pip install coverage
+        coverage xml
+      if: always()
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
         fail_ci_if_error: false
+      if: always()
