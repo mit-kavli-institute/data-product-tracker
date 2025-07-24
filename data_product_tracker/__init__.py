@@ -2,7 +2,12 @@
 
 __author__ = """William Christopher Fong"""
 __email__ = "willfong@mit.edu"
-__version__ = "0.1.5"
+
+try:
+    from ._version import version as __version__
+except ImportError:
+    # package is not installed
+    __version__ = "0.0.0dev"
 
 
 from data_product_tracker import sql as _sql  # noqa F401

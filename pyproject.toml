@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0", "setuptools-scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "data_product_tracker"
-version = "0.1.5"
+dynamic = ["version"]
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
@@ -36,6 +36,8 @@ dev = [
     "pytest>=8.2",
     "tox>=4",
     "tox-docker>=4.1.0",
+    "python-semantic-release>=8.0",
+    "build>=1.0",
 ]
 
 [tool.mypy]
@@ -50,3 +52,22 @@ profile = "black"
 
 [tool.flake8]
 max-line-length = 81
+
+[tool.setuptools_scm]
+write_to = "data_product_tracker/_version.py"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:tool.setuptools_scm.fallback_version"]
+branch = "master"
+upload_to_repository = true
+upload_to_release = true
+build_command = "python -m build"
+commit_version_number = true
+tag_commit = true
+version_source = "tag"
+commit_message = "chore: release {version}\n\n{changelog}"
+
+[tool.semantic_release.branches.staging]
+match = "staging"
+prerelease = true
+prerelease_token = "beta"
