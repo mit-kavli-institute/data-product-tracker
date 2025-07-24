@@ -1,21 +1,24 @@
 name: CI
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, staging ]
+  push:
+    branches: [ master, staging ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:14-alpine
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: testing
           POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
@@ -28,10 +31,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: ${{ matrix.python-version }}
 
     - name: Configure SSH for private dependencies
       env:
@@ -53,13 +56,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install nox
+        pip install tox tox-gh-actions
 
-    - name: Run tests with nox
+    - name: Test with tox
+      run: tox
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
-      run: |
-        nox -s clean mypy flake8 tests-3.11
+        DATABASE_URL: postgresql://postgres:testing@localhost:5432/test_db
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
 
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4

@@ -27,16 +27,16 @@ tox  # This automatically starts a PostgreSQL container
 ### Code Quality & Formatting
 ```bash
 # Format code with black
-black data_product_tracker tests
+black src/data_product_tracker tests
 
 # Sort imports
-isort data_product_tracker tests
+isort src/data_product_tracker tests
 
 # Type checking
-mypy data_product_tracker
+mypy src/data_product_tracker
 
 # Linting
-flake8 data_product_tracker tests
+flake8 src/data_product_tracker tests
 ```
 
 ### Documentation
@@ -54,24 +54,31 @@ sphinx-build -M html docs/source docs/build
 pip install -e ".[dev]"
 ```
 
+### Version Management
+This project uses automated semantic versioning:
+- Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) format
+- Use `fix:` for patches, `feat:` for minor versions, `feat!:` for major versions
+- Production releases from `master` branch, beta releases from `staging` branch
+- See `docs/semantic-versioning.md` for detailed guide
+
 ## Architecture Overview
 
 This is a data product tracking system built to monitor and manage data products, their dependencies, and environments using PostgreSQL as the backend database.
 
 ### Core Components
 
-1. **Database Layer** (`/data_product_tracker/models/`)
+1. **Database Layer** (`/src/data_product_tracker/models/`)
    - Uses SQLAlchemy 2.0+ with PostgreSQL
    - Key models: DataProducts, Environment, Invocation
    - Base model provides common fields and behaviors
    - Database connection managed via `conn.py` using session factory pattern
 
-2. **Business Logic** (`/data_product_tracker/core/` and `/data_product_tracker/io/`)
+2. **Business Logic** (`/src/data_product_tracker/core/` and `/src/data_product_tracker/io/`)
    - `trackers.py` contains main tracking functionality
    - `contracts.py` implements data validation using the `deal` library for design-by-contract
    - `reflection.py` provides database introspection capabilities
 
-3. **CLI Interface** (`/data_product_tracker/cli.py`)
+3. **CLI Interface** (`/src/data_product_tracker/cli.py`)
    - Built with Click framework
    - Currently a template - main functionality not yet implemented
 
