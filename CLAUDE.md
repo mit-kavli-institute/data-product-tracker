@@ -49,9 +49,16 @@ docker-compose up docs                                  # Build and serve docs
 # Local development
 nox -s docs         # Build documentation
 nox -s docs -- serve # Build and serve on port 8000
+nox -s docs_lint    # Lint documentation with doc8
+nox -s docs_linkcheck # Check for broken links
 ```
 
 The project uses NumPy-style docstrings with Sphinx autodoc. See `docs/numpydoc-style-guide.rst` for examples and conventions.
+
+#### Documentation Deployment
+- **GitHub Pages**: Automatically deployed from master/main branch to https://mit-kavli-institute.github.io/data-product-tracker/
+- **ReadTheDocs**: Configured for stable releases at https://data-product-tracker.readthedocs.io
+- **Pull Requests**: Documentation is built and checked in CI for all PRs
 
 ### Installation
 ```bash

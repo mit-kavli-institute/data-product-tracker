@@ -20,6 +20,9 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
     "sphinx.ext.coverage",
+    "sphinx.ext.githubpages",  # Adds .nojekyll file for GitHub Pages
+    "sphinx_copybutton",  # Add copy button to code blocks
+    "myst_parser",  # Support for Markdown files
 ]
 
 # Napoleon settings for numpydoc
@@ -54,14 +57,27 @@ intersphinx_mapping = {
     "click": ("https://click.palletsprojects.com/en/8.1.x/", None),
 }
 
+# Copybutton configuration
+copybutton_prompt_text = r">>> |\.\.\. |\$ "
+copybutton_prompt_is_regexp = True
+
+# MyST parser configuration (for Markdown support)
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+    "html_image",
+]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-# source_suffix = ['.rst', '.md']
-source_suffix = ".rst"
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 
 # The master toctree document.
 master_doc = "index"

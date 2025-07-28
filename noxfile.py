@@ -100,6 +100,8 @@ def docs(session):
         "sphinx-rtd-theme",
         "numpydoc",
         "sphinx-autodoc-typehints",
+        "sphinx-copybutton",
+        "myst-parser",
     )
 
     # Build docs
@@ -117,6 +119,27 @@ def docs(session):
         session.log("Serving documentation at http://localhost:8000")
         session.cd(str(DOCS_DIR / "_build" / "html"))
         session.run("python", "-m", "http.server", "8000")
+
+
+@nox.session(python="3.11")
+def docs_lint(session):
+    """Lint documentation with doc8."""
+    session.install("doc8")
+    session.run("doc8", str(DOCS_DIR))
+
+
+@nox.session(python="3.11")
+def docs_linkcheck(session):
+    """Check documentation for broken links."""
+    install_dpt(session, "-e", ".[dev]")
+    session.install("sphinx")
+    session.run(
+        "sphinx-build",
+        "-b",
+        "linkcheck",
+        str(DOCS_DIR),
+        str(DOCS_DIR / "_build/linkcheck"),
+    )
 
 
 @nox.session(python="3.11")

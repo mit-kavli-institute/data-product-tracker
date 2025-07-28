@@ -101,9 +101,37 @@ jobs:
       run: |
         docker-compose run --rm test-runner nox -s docs
 
+    - name: Check documentation warnings
+      run: |
+        # Build with strict warnings as errors
+        docker-compose run --rm test-runner sphinx-build -W -n -b html docs docs/_build/html
+
+    - name: Lint documentation
+      run: |
+        docker-compose run --rm test-runner bash -c "pip install doc8 && doc8 docs/"
+      continue-on-error: true
+
+    - name: Check documentation links
+      run: |
+        docker-compose run --rm test-runner sphinx-build -b linkcheck docs docs/_build/linkcheck
+      continue-on-error: true
+
+    - name: Generate documentation coverage
+      run: |
+        docker-compose run --rm test-runner sphinx-build -b coverage docs docs/_build/coverage
+        docker-compose run --rm test-runner cat docs/_build/coverage/python.txt
+      continue-on-error: true
+
     - name: Upload documentation
       uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: docs/_build/html/
+      if: always()
+
+    - name: Upload documentation coverage
+      uses: actions/upload-artifact@v4
+      with:
+        name: doc-coverage
+        path: docs/_build/coverage/
       if: always()
