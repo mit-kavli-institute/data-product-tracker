@@ -112,6 +112,9 @@ class Variable(base.Base, base.CreatedOnMixin):
             return False
         return other.key == self.key and other.value == self.value
 
+    def __repr__(self):
+        return f"<OSVar '{self.key}' => '{self.value}'>"
+
     @classmethod
     def compare_to_variable(
         cls, os_variable: OSVariable
@@ -178,6 +181,9 @@ class Library(base.Base, base.CreatedOnMixin):
         if not isinstance(other, self.__class__):
             return False
         return self.name == other.name and self.version == other.version
+
+    def __repr__(self):
+        return f"<Library {self.name} '{self.version}'"
 
     @classmethod
     def compare_to_distribution(

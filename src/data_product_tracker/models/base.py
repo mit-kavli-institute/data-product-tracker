@@ -1,3 +1,4 @@
+import pathlib
 from datetime import datetime
 
 import sqlalchemy as sa
@@ -10,7 +11,13 @@ from sqlalchemy.orm import (
 
 
 class Base(DeclarativeBase):
-    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        sa.Integer().with_variant(sa.BigInteger(), "postgresql"),
+        primary_key=True,
+    )
+
+    # Type Hint Registration
+    type_annotation_map = {pathlib.Path: sa.String}
 
     @classmethod
     def select(cls, *attrs: str):

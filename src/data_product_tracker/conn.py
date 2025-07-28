@@ -39,7 +39,7 @@ CONFIG_DIR = (pathlib.Path("~") / ".config" / "dpt").expanduser()
 CONFIG_PATH = CONFIG_DIR / "db.conf"
 
 
-Session = orm.sessionmaker(expire_on_commit=False)
+session_factory = orm.sessionmaker(expire_on_commit=False)
 
 
 if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
@@ -49,5 +49,5 @@ if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
     )
     db = None
 else:
-    Session.configure(bind=configure_engine(CONFIG_PATH))
-    db = Session()
+    session_factory.configure(bind=configure_engine(CONFIG_PATH))
+    db = session_factory()

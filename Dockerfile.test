@@ -1,0 +1,65 @@
+# Multi-stage Dockerfile for testing with multiple Python versions
+FROM python:3.9-slim as python39
+FROM python:3.10-slim as python310
+FROM python:3.11-slim as python311
+FROM python:3.12-slim as python312
+
+# Main testing image with all Python versions
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    curl \
+    git \
+    openssh-client \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    wget \
+    llvm \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pyenv for Python version management
+RUN curl https://pyenv.run | bash
+
+# Set up pyenv environment
+ENV PYENV_ROOT /root/.pyenv
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH
+
+# Install Python versions
+RUN pyenv install 3.9.18 && \
+    pyenv install 3.10.13 && \
+    pyenv install 3.11.8 && \
+    pyenv install 3.12.2
+
+# Set global Python version to 3.11 (default)
+RUN pyenv global 3.11.8
+
+# Install nox
+RUN pip install --upgrade pip && \
+    pip install nox
+
+# Set up SSH for private Git dependencies
+RUN mkdir -p /root/.ssh && \
+    ssh-keyscan -t rsa tessgit.mit.edu >> /root/.ssh/known_hosts
+
+# Create working directory
+WORKDIR /app
+
+# Copy project files
+COPY . /app/
+
+# Default command
+CMD ["nox"]
