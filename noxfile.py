@@ -95,11 +95,21 @@ def typecheck(session):
 def docs(session):
     """Build documentation with Sphinx."""
     install_dpt(session, "-e", ".[dev]")
-    session.install("sphinx", "sphinx-rtd-theme")
+    session.install(
+        "sphinx",
+        "sphinx-rtd-theme",
+        "numpydoc",
+        "sphinx-autodoc-typehints",
+    )
 
     # Build docs
     session.run(
-        "sphinx-build", "-M", "html", str(DOCS_DIR), str(DOCS_DIR / "_build")
+        "sphinx-build",
+        "-b",
+        "html",
+        "-W",  # Treat warnings as errors
+        str(DOCS_DIR),
+        str(DOCS_DIR / "_build/html"),
     )
 
     # Serve docs if requested

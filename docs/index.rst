@@ -8,6 +8,8 @@ Welcome to Data Product Tracker's documentation!
    readme
    installation
    usage
+   api
+   numpydoc-style-guide
    modules
    contributing
    authors

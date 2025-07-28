@@ -1,3 +1,10 @@
+"""Database reflection and environment detection module.
+
+This module provides functions for reflecting the current environment,
+including installed libraries and environment variables, into the database.
+It handles automatic creation and deduplication of environments.
+"""
+
 import socket
 from collections.abc import Iterable
 from functools import wraps
@@ -14,9 +21,38 @@ from data_product_tracker.variables import OSVariable, yield_os_variables
 
 
 def db_retry(max_retries=2, backoff_factor=2):
-    """
-    Wrap a function to retry a database operation. Retries are done using
-    an increasing backoff factor.
+    """Decorator to retry database operations with exponential backoff.
+
+    This decorator wraps functions that perform database operations and
+    automatically retries them on database errors with increasing wait times.
+
+    Parameters
+    ----------
+    max_retries : int, optional
+        Maximum number of retry attempts. Default is 2.
+    backoff_factor : int, optional
+        Factor by which to multiply the wait time on each retry. Default is 2.
+
+    Returns
+    -------
+    function
+        Decorated function that will retry on database errors.
+
+    Raises
+    ------
+    RuntimeError
+        If all retry attempts fail.
+
+    Notes
+    -----
+    The initial wait time is 0.5 seconds, which is multiplied by
+    backoff_factor after each failed attempt.
+
+    Examples
+    --------
+    >>> @db_retry(max_retries=3, backoff_factor=2)
+    ... def risky_db_operation(db):
+    ...     return db.execute("SELECT * FROM table")
     """
 
     def _internal(func):
@@ -42,6 +78,27 @@ def db_retry(max_retries=2, backoff_factor=2):
 
 @db_retry()
 def reflect_libraries(db, distributions: Iterable[Distribution]):
+    """Reflect Python distributions into the database.
+
+    Creates Library records for the given distributions if they don't already exist.
+
+    Parameters
+    ----------
+    db : sqlalchemy.orm.Session
+        Database session to use for operations.
+    distributions : Iterable[Distribution]
+        Python package distributions to reflect into the database.
+
+    Returns
+    -------
+    set[int]
+        Set of library IDs that were created or found.
+
+    Notes
+    -----
+    This function is idempotent - running it multiple times with the same
+    distributions will not create duplicates.
+    """
     q = sa.select(e.Library)
     libraries = set()
     with db:
@@ -65,6 +122,28 @@ def reflect_libraries(db, distributions: Iterable[Distribution]):
 
 @db_retry()
 def reflect_variables(db, os_variables: Iterable[OSVariable]):
+    """Reflect OS environment variables into the database.
+
+    Creates Variable records for the given OS variables if they don't already exist.
+
+    Parameters
+    ----------
+    db : sqlalchemy.orm.Session
+        Database session to use for operations.
+    os_variables : Iterable[OSVariable]
+        Operating system environment variables to reflect into the database.
+
+    Returns
+    -------
+    list[int]
+        List of variable IDs that were created or found.
+
+    Notes
+    -----
+    This function is idempotent - running it multiple times with the same
+    variables will not create duplicates. Variables are uniquely identified
+    by their key-value pairs.
+    """
     q = sa.select(e.Variable)
     variables = []
     with db:

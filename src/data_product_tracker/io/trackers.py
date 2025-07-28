@@ -1,3 +1,9 @@
+"""Data product tracking system for monitoring data dependencies.
+
+This module provides the main interface for tracking data products, their
+relationships, and the environments in which they are created.
+"""
+
 import inspect
 import pathlib
 from itertools import chain
@@ -16,21 +22,67 @@ from data_product_tracker.reflection import get_or_create_env
 
 
 class DataProductTracker:
+    """Main tracker class for data products and their dependencies.
+
+    This class provides methods to track data products (files), their relationships,
+    and the environments in which they are created. It maintains internal caches
+    for performance and handles automatic environment detection.
+
+    Attributes
+    ----------
+    env_id : int or None
+        ID of the current environment, lazily loaded when needed.
+    _db : sqlalchemy.orm.Session
+        Database session used for all operations.
+    _product_map : dict[str | pathlib.Path, int]
+        Cache mapping file paths to data product IDs.
+    _invocation_cache : dict
+        Cache for function invocation tracking.
+    _variable_cache : dict[int, int]
+        Cache for variable hint relationships.
+
+    Methods
+    -------
+    assign_db(database)
+        Assign a new database session to the tracker.
+    dump_cache()
+        Clear all internal caches.
+    resolve_environment()
+        Get or create the current environment.
+    resolve_dataproduct(path)
+        Get or create a data product for the given path.
+    track(child, parents=None, variable_hints=None)
+        Track a data product and its dependencies.
+    """
+
     def __init__(self):
         self.assign_db(session_factory())
         self.env_id = None
         self.dump_cache()
 
     def assign_db(self, database):
-        """
-        Reassign the database object for the tracker. Useful for testing.
+        """Assign a new database session to the tracker.
+
+        This method is primarily used for testing to inject mock sessions.
+
+        Parameters
+        ----------
+        database : sqlalchemy.orm.Session
+            Database session to use for all tracker operations.
         """
         self._db = database
 
     @deal.ensure(contracts.empty_caches)
     def dump_cache(self):
-        """
-        Removes all cache references to an empty dictionary.
+        """Clear all internal caches.
+
+        Resets all cached mappings to empty dictionaries. This is useful
+        when you want to force the tracker to re-query the database.
+
+        Notes
+        -----
+        This method is decorated with a contract that ensures all caches
+        are empty after execution.
         """
         self._product_map: dict[str | pathlib.Path, int] = {}
         self._invocation_cache = {}
@@ -38,8 +90,21 @@ class DataProductTracker:
 
     @deal.ensure(contracts.environment_exists)
     def resolve_environment(self):
-        """
-        Get or create the current environment id.
+        """Get or create the current environment ID.
+
+        Lazily loads the environment ID based on the current system state,
+        including installed libraries and environment variables.
+
+        Returns
+        -------
+        int
+            ID of the current environment.
+
+        Notes
+        -----
+        The environment is cached after first resolution to avoid repeated
+        database queries. The environment includes the hostname, installed
+        Python packages, and environment variables.
         """
         if self.env_id is None:
             env_id, _ = get_or_create_env(self._db)
@@ -49,8 +114,27 @@ class DataProductTracker:
 
     @deal.ensure(contracts.dataproduct_exists)
     def resolve_dataproduct(self, path) -> int:
-        """
-        Attempt to resolve the given path to an existing dataproduct.
+        """Resolve a file path to a data product ID.
+
+        Attempts to find an existing data product for the given path, creating
+        one if it doesn't exist.
+
+        Parameters
+        ----------
+        path : str, pathlib.Path, or file-like object
+            Path to the file to track. Can be a string path, Path object,
+            or any object with a 'name' attribute (like a file handle).
+
+        Returns
+        -------
+        int
+            ID of the data product in the database.
+
+        Notes
+        -----
+        Paths are always expanded and resolved to absolute paths before
+        storage. The resolved paths are cached to avoid repeated database
+        queries.
         """
         if isinstance(path, str):
             path = pathlib.Path(path)

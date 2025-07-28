@@ -51,6 +51,8 @@ nox -s docs         # Build documentation
 nox -s docs -- serve # Build and serve on port 8000
 ```
 
+The project uses NumPy-style docstrings with Sphinx autodoc. See `docs/numpydoc-style-guide.rst` for examples and conventions.
+
 ### Installation
 ```bash
 # Install package in development mode with all dependencies
