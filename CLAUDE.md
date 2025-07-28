@@ -6,46 +6,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Running Tests
 ```bash
-# Run all tests with coverage
-pytest --cov --cov-report=term-missing
+# Using Docker wrapper script (recommended)
+./scripts/docker-test.sh test        # Run all default sessions
+./scripts/docker-test.sh test tests  # Run only pytest
+./scripts/docker-test.sh test lint   # Run only linting
+./scripts/docker-test.sh shell       # Interactive shell
 
-# Run tests using tox (includes mypy, flake8, and tests)
-tox
+# Using docker-compose directly
+docker-compose run --rm test-runner                    # Run all tests
+docker-compose run --rm test-runner nox -s tests      # Run pytest
+docker-compose run --rm test-runner nox -s tests-3.11 # Specific Python version
 
-# Run specific test environments
-tox -e py311  # Run tests for Python 3.11
-tox -e mypy   # Run mypy type checking
-tox -e flake8 # Run flake8 linting
+# Local development (if nox installed)
+nox              # Run default sessions
+nox -s tests     # Run pytest across all Python versions
+nox -s lint      # Run flake8 linting
+nox -s typecheck # Run mypy
+nox -s docs      # Build documentation
 
-# Run a single test file
-pytest tests/test_specific.py
-
-# Run tests with PostgreSQL database (via tox-docker)
-tox  # This automatically starts a PostgreSQL container
+# Tests now use SQLite (no PostgreSQL required)
 ```
 
 ### Code Quality & Formatting
 ```bash
-# Format code with black
-black src/data_product_tracker tests
+# Using Docker
+docker-compose run --rm test-runner nox -s format    # Format with black & isort
+docker-compose run --rm test-runner nox -s lint      # Lint with flake8
+docker-compose run --rm test-runner nox -s typecheck # Type check with mypy
 
-# Sort imports
-isort src/data_product_tracker tests
-
-# Type checking
-mypy src/data_product_tracker
-
-# Linting
-flake8 src/data_product_tracker tests
+# Local development (if tools installed)
+nox -s format    # Format code
+nox -s lint      # Run linting
+nox -s typecheck # Run type checking
 ```
 
 ### Documentation
 ```bash
-# Build HTML documentation
-tox -e docs
+# Using Docker
+docker-compose run --rm test-runner nox -s docs         # Build docs
+docker-compose up docs                                  # Build and serve docs
 
-# Build docs manually
-sphinx-build -M html docs/source docs/build
+# Local development
+nox -s docs         # Build documentation
+nox -s docs -- serve # Build and serve on port 8000
 ```
 
 ### Installation
@@ -60,6 +63,13 @@ This project uses automated semantic versioning:
 - Use `fix:` for patches, `feat:` for minor versions, `feat!:` for major versions
 - Production releases from `master` branch, beta releases from `staging` branch
 - See `docs/semantic-versioning.md` for detailed guide
+
+### Testing Infrastructure
+- **Test Runner**: Nox (replaced tox) for flexible Python-based configuration
+- **Database**: SQLite (in-memory) for fast, isolated tests - no PostgreSQL required
+- **Containerization**: All tests run in Docker for consistency
+- **Python Versions**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
+- **Documentation**: See `docs/testing-with-nox.md` for detailed testing guide
 
 ## Architecture Overview
 

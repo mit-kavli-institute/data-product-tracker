@@ -5,7 +5,7 @@ from time import sleep
 from typing import Optional
 
 import sqlalchemy as sa
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import exc
 
 from data_product_tracker.exceptions import ModelDoesNotExist
 from data_product_tracker.libraries import Distribution, yield_distributions
@@ -13,7 +13,7 @@ from data_product_tracker.models import environment as e
 from data_product_tracker.variables import OSVariable, yield_os_variables
 
 
-def db_retry(max_retries=10, backoff_factor=2):
+def db_retry(max_retries=2, backoff_factor=2):
     """
     Wrap a function to retry a database operation. Retries are done using
     an increasing backoff factor.
@@ -27,10 +27,13 @@ def db_retry(max_retries=10, backoff_factor=2):
             while current_try <= max_retries:
                 try:
                     return func(*args, **kwargs)
-                except IntegrityError:
+                except exc.DatabaseError as e:
                     sleep(current_wait)
                     current_wait *= backoff_factor
                     current_try += 1
+
+                    if current_try >= max_retries:
+                        raise RuntimeError from e
 
         return wrapper
 
@@ -70,7 +73,7 @@ def reflect_variables(db, os_variables: Iterable[OSVariable]):
                 e.Variable.key == var.key,
                 e.Variable.value == var.value,
             )
-            variable = db.execute(variable_q).scalar()
+            variable = db.scalar(variable_q)
             if variable is None:
                 variable = e.Variable(key=var.key, value=var.value)
                 db.add(variable)

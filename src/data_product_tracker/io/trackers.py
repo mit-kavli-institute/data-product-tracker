@@ -6,7 +6,7 @@ import deal
 import sqlalchemy as sa
 
 from data_product_tracker import contracts
-from data_product_tracker.conn import Session
+from data_product_tracker.conn import session_factory
 from data_product_tracker.models.dataproducts import (
     DataProduct,
     DataProductHierarchy,
@@ -17,7 +17,7 @@ from data_product_tracker.reflection import get_or_create_env
 
 class DataProductTracker:
     def __init__(self):
-        self.assign_db(Session())
+        self.assign_db(session_factory())
         self.env_id = None
         self.dump_cache()
 

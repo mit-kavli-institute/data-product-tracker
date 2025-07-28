@@ -1,20 +1,31 @@
 version: '3.9'
+
 services:
-  db:
-    image: postgres:14.4
-    environment:
-      - POSTGRES_PASSWORD=secrets
-      - POSTGRES_USER=williamfong
-    ports:
-      - "5432:5432"
-  test_runner:
+  test-runner:
     build:
       context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    env_file:
-      - .test_env
+      dockerfile: Dockerfile.test
     volumes:
-      - .:/testing
-      - /tmp:/tmp
+      - .:/app
+      - ~/.ssh:/root/.ssh:ro  # Mount SSH keys for private Git dependencies
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    working_dir: /app
+    command: nox
+    stdin_open: true
+    tty: true
+
+  # Service for running specific nox sessions
+  nox:
+    extends: test-runner
+    command: ${NOX_SESSION:-nox}
+
+  # Service for interactive development
+  dev:
+    extends: test-runner
+    command: /bin/bash
+
+  docs:
+    extends: test-runner
+    command: nox -s docs
