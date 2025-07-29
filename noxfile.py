@@ -48,6 +48,84 @@ def tests(session):
     )
 
 
+@nox.session(python="3.11")
+def tests_postgres(session):
+    """Run tests against PostgreSQL databases."""
+    install_dpt(session, "-e", ".[dev]")
+    session.install(
+        "pytest", "pytest-cov", "pytest-sugar", "hypothesis", "pytest-xdist"
+    )
+
+    # Set environment to use PostgreSQL
+    session.env["TEST_DATABASES"] = "postgres"
+    session.env["IN_DOCKER"] = "true"  # Assume we're in Docker environment
+
+    session.run(
+        "pytest",
+        "--cov=data_product_tracker",
+        "--cov-report=term-missing",
+        "-v",
+        "--database=postgres-16",
+        "--database=postgres-14",
+        *session.posargs,
+    )
+
+
+@nox.session(python="3.11")
+def tests_mysql(session):
+    """Run tests against MySQL/MariaDB databases."""
+    install_dpt(session, "-e", ".[dev]")
+    session.install(
+        "pytest",
+        "pytest-cov",
+        "pytest-sugar",
+        "hypothesis",
+        "pytest-xdist",
+        "pymysql",  # MySQL driver
+    )
+
+    # Set environment to use MySQL
+    session.env["IN_DOCKER"] = "true"
+
+    session.run(
+        "pytest",
+        "--cov=data_product_tracker",
+        "--cov-report=term-missing",
+        "-v",
+        "--database=mysql-8",
+        "--database=mariadb-11",
+        *session.posargs,
+    )
+
+
+@nox.session(python="3.11")
+def tests_all_databases(session):
+    """Run tests against all configured databases."""
+    install_dpt(session, "-e", ".[dev]")
+    session.install(
+        "pytest",
+        "pytest-cov",
+        "pytest-sugar",
+        "hypothesis",
+        "pytest-xdist",
+        "pymysql",  # For MySQL support
+    )
+
+    # Set environment
+    session.env["IN_DOCKER"] = "true"
+
+    session.run(
+        "pytest",
+        "--cov=data_product_tracker",
+        "--cov-report=term-missing",
+        "--cov-report=html",
+        "--cov-report=xml",
+        "-v",
+        "--all-databases",
+        *session.posargs,
+    )
+
+
 @nox.session(python=PYTHON_VERSIONS)
 def tests_serial(session):
     """Run the test suite with pytest in serial mode (no parallelization)."""
