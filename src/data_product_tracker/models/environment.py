@@ -58,6 +58,18 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def matching_env_id_q(cls, os_variables: list[OSVariable]):
+        """Query for environment IDs matching given variables.
+        
+        Parameters
+        ----------
+        os_variables : list[OSVariable]
+            List of OS variables to match.
+            
+        Returns
+        -------
+        sqlalchemy.sql.Select
+            Query for matching environment IDs.
+        """
         q = (
             sa.select(cls.environment_id)
             .join(Variable, Variable.id == cls.variable_id)
