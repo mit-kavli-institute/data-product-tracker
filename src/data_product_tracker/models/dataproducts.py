@@ -65,7 +65,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
 
     @hybrid_property
     def path(self):
-        return pathlib.Path(self._path)
+        return self._path
 
     @path.inplace.setter
     def _path_setter(self, value: typing.Union[pathlib.Path, FileIO, str]):

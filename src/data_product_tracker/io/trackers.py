@@ -184,18 +184,19 @@ class DataProductTracker:
             If true, determine the hash value of the `target_file` using the
             non-cryptographic murmur3 hash algorithm.
         """
+        # First resolve/create the dataproduct
+        child_id = self.resolve_dataproduct(target_file)
         invocation_id = self.resolve_invocation(inspect.stack()[1:])
+
         with self._db as db:
-            dp = DataProduct(path=target_file, invocation_id=invocation_id)
+            # Update the existing dataproduct with invocation and hash info
+            dp = db.get(DataProduct, child_id)
+            dp.invocation_id = invocation_id
+
             if hash_override is not None:
                 dp.mmh3_hash = hash_override
             elif determine_hash is True:
                 dp.calculate_hash()
-
-            db.add(dp)
-            db.flush()  # Emit SQL and return assigned id
-            child_id = dp.id
-            child_path = dp.path
 
             # Determine relationships
             relationships = []
@@ -212,7 +213,6 @@ class DataProductTracker:
                 relationships.append(rel)
             db.bulk_insert_mappings(DataProductHierarchy, relationships)
             db.commit()
-            self._product_map[child_path] = child_id
 
             return dp
 
