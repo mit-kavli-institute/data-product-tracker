@@ -12,10 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./scripts/docker-test.sh test lint   # Run only linting
 ./scripts/docker-test.sh shell       # Interactive shell
 
-# Using docker-compose directly
-docker-compose run --rm test-runner                    # Run all tests
-docker-compose run --rm test-runner nox -s tests      # Run pytest
-docker-compose run --rm test-runner nox -s tests-3.11 # Specific Python version
+# Using docker compose directly (Note: use 'docker-compose' for older Docker versions)
+docker compose run --rm test-runner                    # Run all tests
+docker compose run --rm test-runner nox -s tests      # Run pytest
+docker compose run --rm test-runner nox -s tests-3.11 # Specific Python version
 
 # Local development (if nox installed)
 nox              # Run default sessions
@@ -24,15 +24,17 @@ nox -s lint      # Run flake8 linting
 nox -s typecheck # Run mypy
 nox -s docs      # Build documentation
 
-# Tests now use SQLite (no PostgreSQL required)
+# Notes:
+# - Tests now use SQLite (no PostgreSQL required)
+# - Docker image based on thekevjames/nox with all Python versions pre-installed
 ```
 
 ### Code Quality & Formatting
 ```bash
 # Using Docker
-docker-compose run --rm test-runner nox -s format    # Format with black & isort
-docker-compose run --rm test-runner nox -s lint      # Lint with flake8
-docker-compose run --rm test-runner nox -s typecheck # Type check with mypy
+docker compose run --rm test-runner nox -s format    # Format with black & isort
+docker compose run --rm test-runner nox -s lint      # Lint with flake8
+docker compose run --rm test-runner nox -s typecheck # Type check with mypy
 
 # Local development (if tools installed)
 nox -s format    # Format code
@@ -43,8 +45,8 @@ nox -s typecheck # Run type checking
 ### Documentation
 ```bash
 # Using Docker
-docker-compose run --rm test-runner nox -s docs         # Build docs
-docker-compose up docs                                  # Build and serve docs
+docker compose run --rm test-runner nox -s docs         # Build docs
+docker compose up docs                                  # Build and serve docs
 
 # Local development
 nox -s docs         # Build documentation
@@ -67,7 +69,9 @@ This project uses automated semantic versioning:
 ### Testing Infrastructure
 - **Test Runner**: Nox (replaced tox) for flexible Python-based configuration
 - **Database**: SQLite (in-memory) for fast, isolated tests - no PostgreSQL required
-- **Containerization**: All tests run in Docker for consistency
+- **Containerization**: All tests run in Docker using the `thekevjames/nox` image
+  - Simplified Dockerfile.test uses pre-built nox image with all Python versions
+  - No need for complex multi-stage builds or pyenv setup
 - **Python Versions**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
 - **Documentation**: See `docs/testing-with-nox.md` for detailed testing guide
 

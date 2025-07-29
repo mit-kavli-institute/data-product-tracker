@@ -1,3 +1,5 @@
+"""Hypothesis strategies for property-based testing."""
+
 import pathlib
 from functools import reduce
 

@@ -24,19 +24,21 @@ The easiest way to run tests is using the provided Docker wrapper script:
 ./scripts/docker-test.sh docs
 ```
 
-### Using docker-compose directly
+### Using docker compose directly
 
 ```bash
 # Run all tests
-docker-compose run --rm test-runner
+docker compose run --rm test-runner
 
 # Run specific nox session
-docker-compose run --rm test-runner nox -s tests
-docker-compose run --rm test-runner nox -s lint
+docker compose run --rm test-runner nox -s tests
+docker compose run --rm test-runner nox -s lint
 
 # Interactive development
-docker-compose run --rm dev
+docker compose run --rm dev
 ```
+
+> **Note**: For older Docker versions, use `docker-compose` (hyphenated) instead of `docker compose`.
 
 ## Test Environment
 
@@ -117,10 +119,11 @@ nox -s safety
 ## Docker Architecture
 
 ### Dockerfile.test
-Multi-stage Dockerfile that:
-- Installs all Python versions (3.9-3.12) using pyenv
-- Sets up nox and development dependencies
-- Configures SSH for private Git dependencies
+Simplified Dockerfile using the `thekevjames/nox` base image:
+- Pre-installed with all Python versions (3.9-3.12)
+- Nox and common testing tools already configured
+- Minimal setup required - just copies project files
+- No need for complex multi-stage builds or pyenv
 
 ### docker-compose.yml Services
 - **test-runner**: Main service for running nox
@@ -176,7 +179,7 @@ GitHub Actions workflow uses Docker for consistent testing:
 ### Docker Build Issues
 ```bash
 # Rebuild without cache
-docker-compose build --no-cache test-runner
+docker compose build --no-cache test-runner
 ```
 
 ### Permission Issues

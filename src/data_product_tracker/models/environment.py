@@ -1,3 +1,5 @@
+"""Environment, library, and variable models."""
+
 import functools
 import os
 from importlib.metadata import distributions
@@ -12,6 +14,8 @@ from data_product_tracker.variables import OSVariable
 
 
 class Environment(base.Base, base.CreatedOnMixin):
+    """Represents a computational environment with variables and libraries."""
+
     __tablename__ = "environments"
 
     host: Mapped[str] = mapped_column(sa.String(), default=gethostname)
@@ -28,6 +32,8 @@ class Environment(base.Base, base.CreatedOnMixin):
 
 
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
+    """Maps variables to environments."""
+
     __tablename__ = "variable_environment_mappings"
 
     environment_id: Mapped[int] = mapped_column(
@@ -43,6 +49,7 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     )
 
     def __repr__(self):
+        """Return string representation."""
         return (
             "VariableEnvironmentMap("
             f"environment_id={self.environment_id}, "
@@ -51,6 +58,18 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def matching_env_id_q(cls, os_variables: list[OSVariable]):
+        """Query for environment IDs matching given variables.
+
+        Parameters
+        ----------
+        os_variables : list[OSVariable]
+            List of OS variables to match.
+
+        Returns
+        -------
+        sqlalchemy.sql.Select
+            Query for matching environment IDs.
+        """
         q = (
             sa.select(cls.environment_id)
             .join(Variable, Variable.id == cls.variable_id)
@@ -62,6 +81,8 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
+    """Maps libraries to environments."""
+
     __tablename__ = "library_environment_mappings"
 
     environment_id: Mapped[int] = mapped_column(
@@ -73,6 +94,7 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
     __table_args__ = (sa.UniqueConstraint("environment_id", "library_id"),)
 
     def __repr__(self):
+        """Return string representation."""
         return (
             "LibraryEnvironmentMap("
             f"environment_id={self.environment_id}, "
@@ -81,6 +103,18 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def matching_env_id_q(cls, distributions: list[Distribution]):
+        """Query for environment IDs matching given distributions.
+
+        Parameters
+        ----------
+        distributions : list[Distribution]
+            List of distributions to match.
+
+        Returns
+        -------
+        sqlalchemy.sql.Select
+            Query for matching environment IDs.
+        """
         q = (
             sa.select(cls.environment_id)
             .join(Library, Library.id == cls.library_id)
@@ -92,6 +126,8 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
 
 
 class Variable(base.Base, base.CreatedOnMixin):
+    """Represents an environment variable."""
+
     __tablename__ = "variables"
 
     key: Mapped[str]
@@ -105,20 +141,35 @@ class Variable(base.Base, base.CreatedOnMixin):
     __table_args__ = (sa.UniqueConstraint("key", "value"),)
 
     def __hash__(self):
+        """Return hash of variable key-value pair."""
         return hash((self.key, self.value))
 
     def __eq__(self, other):
+        """Check equality based on key and value."""
         if not isinstance(other, self.__class__):
             return False
         return other.key == self.key and other.value == self.value
 
     def __repr__(self):
+        """Return string representation."""
         return f"<OSVar '{self.key}' => '{self.value}'>"
 
     @classmethod
     def compare_to_variable(
         cls, os_variable: OSVariable
     ) -> sa.ColumnElement[bool]:
+        """Create SQL comparison for OSVariable.
+
+        Parameters
+        ----------
+        os_variable : OSVariable
+            Variable to compare against.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL expression for comparison.
+        """
         return sa.and_(
             cls.key == os_variable.key, cls.value == os_variable.value
         )
@@ -127,11 +178,35 @@ class Variable(base.Base, base.CreatedOnMixin):
     def filter_by_variables(
         cls, os_variables: list[OSVariable]
     ) -> sa.ColumnElement[bool]:
+        """Create filter for multiple OS variables.
+
+        Parameters
+        ----------
+        os_variables : list[OSVariable]
+            Variables to filter by.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL OR expression for all variables.
+        """
         clauses = [cls.compare_to_variable(var) for var in os_variables]
         return sa.or_(*clauses)
 
     @classmethod
     def get_os_variables(cls, db):
+        """Get or create Variable instances for current OS environment.
+
+        Parameters
+        ----------
+        db : Session
+            Database session.
+
+        Returns
+        -------
+        list[Variable]
+            List of Variable instances from environment.
+        """
         q = cls.select()
         variables = []
         filters = []
@@ -162,6 +237,8 @@ class Variable(base.Base, base.CreatedOnMixin):
 
 
 class Library(base.Base, base.CreatedOnMixin):
+    """Represents an installed Python library/package."""
+
     __tablename__ = "libraries"
 
     name: Mapped[str]
@@ -175,20 +252,35 @@ class Library(base.Base, base.CreatedOnMixin):
     __table_args__ = (sa.UniqueConstraint("name", "version"),)
 
     def __hash__(self):
+        """Return hash of library name-version pair."""
         return hash((self.name, self.version))
 
     def __eq__(self, other):
+        """Check equality based on name and version."""
         if not isinstance(other, self.__class__):
             return False
         return self.name == other.name and self.version == other.version
 
     def __repr__(self):
+        """Return string representation."""
         return f"<Library {self.name} '{self.version}'"
 
     @classmethod
     def compare_to_distribution(
         cls, distribution: Distribution
     ) -> sa.ColumnElement[bool]:
+        """Create SQL comparison for Distribution.
+
+        Parameters
+        ----------
+        distribution : Distribution
+            Distribution to compare against.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL expression for comparison.
+        """
         return sa.and_(
             cls.name == distribution.name,
             cls.version == distribution.version,
@@ -198,6 +290,18 @@ class Library(base.Base, base.CreatedOnMixin):
     def filter_by_distributions(
         cls, distributions: list[Distribution]
     ) -> sa.ColumnElement[bool]:
+        """Create filter for multiple distributions.
+
+        Parameters
+        ----------
+        distributions : list[Distribution]
+            Distributions to filter by.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL OR expression for all distributions.
+        """
         clauses = [
             cls.compare_to_distribution(distribution)
             for distribution in distributions
@@ -206,6 +310,18 @@ class Library(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def get_installed_python_libraries(cls, db):
+        """Get or create Library instances for installed packages.
+
+        Parameters
+        ----------
+        db : Session
+            Database session.
+
+        Returns
+        -------
+        list[Library]
+            List of Library instances from environment.
+        """
         q = cls.select()
         libraries = []
         filters = []

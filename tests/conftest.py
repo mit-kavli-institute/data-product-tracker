@@ -1,4 +1,4 @@
-"""Establish test-wide fixtures for `data_product_tracker` package"""
+"""Establish test-wide fixtures for `data_product_tracker` package."""
 
 import pathlib
 import tempfile
@@ -65,7 +65,7 @@ def db_session() -> Generator[SessionType, None, None]:
 
 @pytest.fixture
 def temp_db_file(worker_id) -> Generator[pathlib.Path, None, None]:
-    """Create a temporary SQLite database file for testing file-based operations.
+    """Create a temporary SQLite database file for file-based testing.
 
     Uses worker_id from pytest-xdist to ensure unique files per test worker.
     """
