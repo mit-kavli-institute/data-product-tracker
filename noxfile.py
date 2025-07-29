@@ -111,12 +111,25 @@ def docs(session):
 
 @nox.session(python="3.11")
 def coverage(session):
-    """Generate and display coverage report."""
-    session.install("coverage[toml]")
+    """Run tests with coverage and generate reports."""
+    install_dpt(session, "-e", ".[dev]")
+    session.install(
+        "pytest", "pytest-cov", "pytest-sugar", "hypothesis", "coverage[toml]"
+    )
 
-    # Generate reports
+    # Run tests with coverage
+    session.run(
+        "pytest",
+        "--cov=data_product_tracker",
+        "--cov-report=term-missing",
+        "--cov-report=html",
+        "--cov-report=xml",
+        "-v",
+        *session.posargs,
+    )
+
+    # Also generate a text report
     session.run("coverage", "report")
-    session.run("coverage", "html")
 
     # Open in browser if requested
     if session.posargs and session.posargs[0] == "open":
