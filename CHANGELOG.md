@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.0-beta.4 (2025-07-29)
+
+### Features
+
+- Add multi-database testing support
+  ([`b7a3e10`](https://github.com/mit-kavli-institute/data-product-tracker/commit/b7a3e1019e10a1a8397420eb5d25006b6805d450))
+
+- Optimize reflection performance with bulk operations and caching
+  ([`970431d`](https://github.com/mit-kavli-institute/data-product-tracker/commit/970431d9e4768dbb72c60386749e58004ae24f9d))
+
+
 ## v1.0.0-beta.3 (2025-07-29)
 
 ### Bug Fixes
