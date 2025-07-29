@@ -61,6 +61,17 @@ def test_reflection_of_libraries(db_session_file, distribution: Distribution):
 @given(dpt_st.environs(), dpt_st.library_installations())
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_reflection_of_environment(db_session_file, environ, distributions):
+    # Clean up any existing data to ensure test isolation
+    with db_session_file:
+        # Delete all environment mappings first (due to foreign keys)
+        db_session_file.execute(sa.delete(e.LibraryEnvironmentMap))
+        db_session_file.execute(sa.delete(e.VariableEnvironmentMap))
+        # Then delete environments, libraries, and variables
+        db_session_file.execute(sa.delete(e.Environment))
+        db_session_file.execute(sa.delete(e.Library))
+        db_session_file.execute(sa.delete(e.Variable))
+        db_session_file.commit()
+
     env_id, created = get_or_create_env(
         db_session_file, environ, distributions
     )

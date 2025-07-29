@@ -188,12 +188,12 @@ class DataProductTracker:
         with self._db as db:
             dp = DataProduct(path=target_file, invocation_id=invocation_id)
             if hash_override is not None:
-                dp.mmh3 = hash_override
+                dp.mmh3_hash = hash_override
             elif determine_hash is True:
                 dp.calculate_hash()
 
             db.add(dp)
-            db.commit()  # Emit SQL and return assigned id
+            db.flush()  # Emit SQL and return assigned id
             child_id = dp.id
             child_path = dp.path
 

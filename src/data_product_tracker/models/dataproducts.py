@@ -8,6 +8,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from data_product_tracker.models import base
+from data_product_tracker.models.base import PathType
 
 
 class DataProductHierarchy(base.Base, base.CreatedOnMixin):
@@ -28,7 +29,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
         sa.BigInteger, sa.ForeignKey("invocations.id")
     )
     mmh3_hash: Mapped[typing.Optional[int]] = mapped_column(sa.BigInteger)
-    _path: Mapped[pathlib.Path] = mapped_column("path", sa.String(length=256))
+    _path: Mapped[pathlib.Path] = mapped_column("path", PathType(length=256))
 
     parents = relationship(
         "DataProduct",
@@ -37,6 +38,9 @@ class DataProduct(base.Base, base.CreatedOnMixin):
         secondaryjoin="DataProduct.id == DataProductHierarchy.parent_id",
         backref="children",
     )
+
+    def __repr__(self):
+        return f"<DP {self.id} {self.path}>"
 
     @classmethod
     def from_file(cls, fd: typing.IO) -> "DataProduct":
@@ -49,8 +53,12 @@ class DataProduct(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def from_path(cls, path: pathlib.Path) -> "DataProduct":
-        with open(path, "rb") as fin:
-            return cls.from_file(fin)
+        if path.exists():
+            with open(path, "rb") as fin:
+                return cls.from_file(fin)
+        else:
+            # File doesn't exist yet, create without hash
+            return cls(path=path)
 
     def calculate_hash(self):
         raise NotImplementedError
@@ -76,4 +84,5 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     @path.inplace.expression
     @classmethod
     def _path_expr(cls):
-        return cls._path
+        # Handle comparison with Path objects in SQL expressions
+        return sa.type_coerce(cls._path, PathType)

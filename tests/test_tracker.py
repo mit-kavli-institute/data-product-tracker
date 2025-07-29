@@ -2,7 +2,7 @@ import pathlib
 from tempfile import TemporaryDirectory
 
 import sqlalchemy as sa
-from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import HealthCheck, assume, given, note, settings
 from hypothesis import strategies as st
 
 from data_product_tracker import tracker as dp_tracker
@@ -16,7 +16,7 @@ from .strategies import file_paths
     deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]
 )
 @given(file_paths(), file_paths())
-def test_trackers(db_session, parent, child):
+def test_trackers(db_session_file, parent, child):
     assume(not (parent.is_relative_to(child) or child.is_relative_to(parent)))
     select_dp = sa.select(DataProduct)
     with TemporaryDirectory() as _dir:
@@ -26,18 +26,22 @@ def test_trackers(db_session, parent, child):
         ensure_directory(child_path)
         ensure_directory(parent_path)
 
-        dp_tracker.assign_db(db_session)
+        dp_tracker.assign_db(db_session_file)
         dp_tracker.env_id = None
         dp_tracker.dump_cache()
 
-        with open(parent_path, "wb") as fout:
-            dp_tracker.track(fout)
+        note(child_path)
+        note(parent_path)
 
-        with open(child_path, "wb") as fout2:
-            dp_tracker.track(fout2, parents=[fout])
+        with open(parent_path, "wb"):
+            dp_tracker.track(parent_path)
 
-        dp = db_session.execute(
-            select_dp.where(DataProduct.path == child_path)
+        with open(child_path, "wb"):
+            dp_tracker.track(child_path, parents=[parent_path])
+
+        note(str(db_session_file.execute(sa.select(DataProduct)).all()))
+        dp = db_session_file.execute(
+            select_dp.where(DataProduct.path == child_path.resolve())
         ).scalar()
         assert dp is not None
         assert dp.parents[0].path == parent_path

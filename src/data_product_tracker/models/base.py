@@ -8,6 +8,26 @@ from sqlalchemy.orm import (
     declared_attr,
     mapped_column,
 )
+from sqlalchemy.types import TypeDecorator
+
+
+class PathType(TypeDecorator):
+    """Represents a pathlib.Path as a string in the database."""
+
+    impl = sa.String
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        """Convert Path to string when saving to database."""
+        if value is not None:
+            return str(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        """Convert string back to Path when loading from database."""
+        if value is not None:
+            return pathlib.Path(value)
+        return value
 
 
 class Base(DeclarativeBase):
@@ -17,7 +37,7 @@ class Base(DeclarativeBase):
     )
 
     # Type Hint Registration
-    type_annotation_map = {pathlib.Path: sa.String}
+    type_annotation_map = {pathlib.Path: PathType}
 
     @classmethod
     def select(cls, *attrs: str):
