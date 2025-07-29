@@ -25,8 +25,14 @@ nox -s typecheck # Run mypy
 nox -s docs      # Build documentation
 
 # Notes:
-# - Tests now use SQLite (no PostgreSQL required)
+# - Tests default to SQLite (no external services required)
+# - Multi-database testing available (PostgreSQL, MySQL)
 # - Docker image based on thekevjames/nox with all Python versions pre-installed
+
+# Multi-database testing
+./scripts/start-test-databases.sh            # Start database services
+./scripts/docker-test.sh test tests-postgres # Test with PostgreSQL
+./scripts/docker-test.sh test tests-all-databases # Test all databases
 ```
 
 ### Code Quality & Formatting
@@ -68,12 +74,19 @@ This project uses automated semantic versioning:
 
 ### Testing Infrastructure
 - **Test Runner**: Nox (replaced tox) for flexible Python-based configuration
-- **Database**: SQLite (in-memory) for fast, isolated tests - no PostgreSQL required
+- **Database Support**:
+  - SQLite (default) for fast, isolated tests - no external services required
+  - PostgreSQL 16 & 14 for production-like testing
+  - MySQL 8 & MariaDB 11 (optional, for compatibility testing)
+  - Multi-database testing via parameterized fixtures
 - **Containerization**: All tests run in Docker using the `thekevjames/nox` image
   - Simplified Dockerfile.test uses pre-built nox image with all Python versions
+  - Database services defined in docker-compose.yml
   - No need for complex multi-stage builds or pyenv setup
 - **Python Versions**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
-- **Documentation**: See `docs/testing-with-nox.md` for detailed testing guide
+- **Documentation**:
+  - See `docs/testing-with-nox.md` for general testing guide
+  - See `docs/testing-multi-db.md` for multi-database testing guide
 
 ## Architecture Overview
 
@@ -108,9 +121,11 @@ This is a data product tracking system built to monitor and manage data products
 2. **Contract-Based Design**: Employs the `deal` library for runtime contract verification, ensuring data integrity and proper error handling
 
 3. **Testing Strategy**:
-   - Uses real PostgreSQL instances via `pytest-postgresql`
+   - Default tests use SQLite for speed and simplicity
+   - Multi-database testing available with PostgreSQL and MySQL via Docker
    - Property-based testing with `hypothesis`
-   - Fixtures defined in `tests/conftest.py` provide database sessions
+   - Parameterized fixtures in `tests/conftest.py` provide database sessions
+   - Database type can be selected via command line options
 
 4. **Code Quality**: Enforced through:
    - Type hints checked by mypy with SQLAlchemy plugin

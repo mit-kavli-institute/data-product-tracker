@@ -73,6 +73,11 @@ pythonpath = ["src"]
 # Configure pytest-xdist for SQLite compatibility
 markers = [
     "serial: marks tests that should run serially (not in parallel)",
+    "postgres: mark test to run only on PostgreSQL",
+    "sqlite: mark test to run only on SQLite",
+    "mysql: mark test to run only on MySQL/MariaDB",
+    "slow: mark test as slow on certain databases",
+    "all_databases: explicitly run on all database types",
 ]
 
 [tool.setuptools.packages.find]

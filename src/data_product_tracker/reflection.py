@@ -48,6 +48,7 @@ class EnvironmentCache:
     """Simple TTL cache for environment lookups."""
 
     def __init__(self, ttl_seconds=300):
+        """Initialize an empty cache with a time to live eviction strategy."""
         self._cache = {}
         self._timestamps = {}
         self.ttl = ttl_seconds
@@ -83,6 +84,22 @@ class EnvironmentCache:
 _env_cache = EnvironmentCache()
 
 
+def _supports_returning(db):
+    """Check if database supports RETURNING clause.
+
+    Parameters
+    ----------
+    db : Session
+        Database session.
+
+    Returns
+    -------
+    bool
+        True if database supports RETURNING clause.
+    """
+    return db.bind.dialect.name == "postgresql"
+
+
 def clear_environment_cache():
     """Clear the environment cache. Useful for testing."""
     _env_cache.clear()
@@ -111,24 +128,63 @@ def reflect_libraries_bulk(db, distributions: Iterable[Distribution]):
     result_map = {}
 
     with db:
-        # For SQLite or when dealing with small sets, use simpler approach
-        # This maintains compatibility while being more efficient than N queries
-        for dist in distributions_list:
-            # Check if exists
-            lib_q = sa.select(e.Library.id).where(
-                e.Library.name == dist.name,
-                e.Library.version == dist.version,
-            )
-            lib_id = db.scalar(lib_q)
+        # First, find all existing libraries in a single query
+        existing_libs = []
+        if distributions_list:
+            # Build OR conditions for all distributions
+            conditions = [
+                sa.and_(
+                    e.Library.name == dist.name,
+                    e.Library.version == dist.version,
+                )
+                for dist in distributions_list
+            ]
 
-            if lib_id is None:
-                # Create new library
-                library = e.Library(name=dist.name, version=dist.version)
-                db.add(library)
-                db.flush()
-                lib_id = library.id
+            if conditions:
+                existing_q = sa.select(
+                    e.Library.id, e.Library.name, e.Library.version
+                ).where(sa.or_(*conditions))
 
-            result_map[(dist.name, dist.version)] = lib_id
+                existing_libs = db.execute(existing_q).all()
+
+                # Map existing libraries
+                for lib_id, name, version in existing_libs:
+                    result_map[(name, version)] = lib_id
+
+        # Find libraries that need to be created
+        existing_keys = set(result_map.keys())
+        to_create = [
+            dist
+            for dist in distributions_list
+            if (dist.name, dist.version) not in existing_keys
+        ]
+
+        if to_create:
+            if _supports_returning(db):
+                # PostgreSQL: Use bulk insert with RETURNING
+                insert_stmt = (
+                    sa.insert(e.Library)
+                    .values(
+                        [
+                            {"name": dist.name, "version": dist.version}
+                            for dist in to_create
+                        ]
+                    )
+                    .returning(e.Library.id, e.Library.name, e.Library.version)
+                )
+
+                new_libs = db.execute(insert_stmt).all()
+
+                # Map newly created libraries
+                for lib_id, name, version in new_libs:
+                    result_map[(name, version)] = lib_id
+            else:
+                # SQLite: Use individual inserts
+                for dist in to_create:
+                    library = e.Library(name=dist.name, version=dist.version)
+                    db.add(library)
+                    db.flush()
+                    result_map[(dist.name, dist.version)] = library.id
 
         db.commit()
 
@@ -158,24 +214,62 @@ def reflect_variables_bulk(db, os_variables: Iterable[OSVariable]):
     result_map = {}
 
     with db:
-        # For SQLite or when dealing with small sets, use simpler approach
-        # This maintains compatibility while being more efficient than N queries
-        for var in variables_list:
-            # Check if exists
-            var_q = sa.select(e.Variable.id).where(
-                e.Variable.key == var.key,
-                e.Variable.value == var.value,
-            )
-            var_id = db.scalar(var_q)
+        # First, find all existing variables in a single query
+        existing_vars = []
+        if variables_list:
+            # Build OR conditions for all variables
+            conditions = [
+                sa.and_(
+                    e.Variable.key == var.key, e.Variable.value == var.value
+                )
+                for var in variables_list
+            ]
 
-            if var_id is None:
-                # Create new variable
-                variable = e.Variable(key=var.key, value=var.value)
-                db.add(variable)
-                db.flush()
-                var_id = variable.id
+            if conditions:
+                existing_q = sa.select(
+                    e.Variable.id, e.Variable.key, e.Variable.value
+                ).where(sa.or_(*conditions))
 
-            result_map[(var.key, var.value)] = var_id
+                existing_vars = db.execute(existing_q).all()
+
+                # Map existing variables
+                for var_id, key, value in existing_vars:
+                    result_map[(key, value)] = var_id
+
+        # Find variables that need to be created
+        existing_keys = set(result_map.keys())
+        to_create = [
+            var
+            for var in variables_list
+            if (var.key, var.value) not in existing_keys
+        ]
+
+        if to_create:
+            if _supports_returning(db):
+                # PostgreSQL: Use bulk insert with RETURNING
+                insert_stmt = (
+                    sa.insert(e.Variable)
+                    .values(
+                        [
+                            {"key": var.key, "value": var.value}
+                            for var in to_create
+                        ]
+                    )
+                    .returning(e.Variable.id, e.Variable.key, e.Variable.value)
+                )
+
+                new_vars = db.execute(insert_stmt).all()
+
+                # Map newly created variables
+                for var_id, key, value in new_vars:
+                    result_map[(key, value)] = var_id
+            else:
+                # SQLite: Use individual inserts
+                for var in to_create:
+                    variable = e.Variable(key=var.key, value=var.value)
+                    db.add(variable)
+                    db.flush()
+                    result_map[(var.key, var.value)] = variable.id
 
         db.commit()
 
@@ -187,7 +281,7 @@ def get_matching_environment_single_query(
     db,
     os_variables: list[OSVariable],
     distributions: list[Distribution],
-    hostname: str = None,
+    hostname: Optional[str] = None,
 ) -> Optional[int]:
     """Find environment matching all criteria in a single optimized query.
 
