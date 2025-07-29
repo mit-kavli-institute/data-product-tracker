@@ -24,7 +24,9 @@ nox -s lint      # Run flake8 linting
 nox -s typecheck # Run mypy
 nox -s docs      # Build documentation
 
-# Tests now use SQLite (no PostgreSQL required)
+# Notes:
+# - Tests now use SQLite (no PostgreSQL required)
+# - Docker image based on thekevjames/nox with all Python versions pre-installed
 ```
 
 ### Code Quality & Formatting
@@ -67,7 +69,9 @@ This project uses automated semantic versioning:
 ### Testing Infrastructure
 - **Test Runner**: Nox (replaced tox) for flexible Python-based configuration
 - **Database**: SQLite (in-memory) for fast, isolated tests - no PostgreSQL required
-- **Containerization**: All tests run in Docker for consistency
+- **Containerization**: All tests run in Docker using the `thekevjames/nox` image
+  - Simplified Dockerfile.test uses pre-built nox image with all Python versions
+  - No need for complex multi-stage builds or pyenv setup
 - **Python Versions**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
 - **Documentation**: See `docs/testing-with-nox.md` for detailed testing guide
 

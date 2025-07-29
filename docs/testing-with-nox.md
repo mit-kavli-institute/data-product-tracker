@@ -119,10 +119,11 @@ nox -s safety
 ## Docker Architecture
 
 ### Dockerfile.test
-Multi-stage Dockerfile that:
-- Installs all Python versions (3.9-3.12) using pyenv
-- Sets up nox and development dependencies
-- Configures SSH for private Git dependencies
+Simplified Dockerfile using the `thekevjames/nox` base image:
+- Pre-installed with all Python versions (3.9-3.12)
+- Nox and common testing tools already configured
+- Minimal setup required - just copies project files
+- No need for complex multi-stage builds or pyenv
 
 ### docker-compose.yml Services
 - **test-runner**: Main service for running nox
