@@ -49,6 +49,7 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     )
 
     def __repr__(self):
+        """Return string representation."""
         return (
             "VariableEnvironmentMap("
             f"environment_id={self.environment_id}, "
@@ -115,6 +116,7 @@ class Variable(base.Base, base.CreatedOnMixin):
     __table_args__ = (sa.UniqueConstraint("key", "value"),)
 
     def __hash__(self):
+        """Return hash of variable key-value pair."""
         return hash((self.key, self.value))
 
     def __eq__(self, other):
@@ -187,20 +189,35 @@ class Library(base.Base, base.CreatedOnMixin):
     __table_args__ = (sa.UniqueConstraint("name", "version"),)
 
     def __hash__(self):
+        """Return hash of library name-version pair."""
         return hash((self.name, self.version))
 
     def __eq__(self, other):
+        """Check equality based on name and version."""
         if not isinstance(other, self.__class__):
             return False
         return self.name == other.name and self.version == other.version
 
     def __repr__(self):
+        """Return string representation."""
         return f"<Library {self.name} '{self.version}'"
 
     @classmethod
     def compare_to_distribution(
         cls, distribution: Distribution
     ) -> sa.ColumnElement[bool]:
+        """Create SQL comparison for Distribution.
+
+        Parameters
+        ----------
+        distribution : Distribution
+            Distribution to compare against.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL expression for comparison.
+        """
         return sa.and_(
             cls.name == distribution.name,
             cls.version == distribution.version,
@@ -210,6 +227,18 @@ class Library(base.Base, base.CreatedOnMixin):
     def filter_by_distributions(
         cls, distributions: list[Distribution]
     ) -> sa.ColumnElement[bool]:
+        """Create filter for multiple distributions.
+
+        Parameters
+        ----------
+        distributions : list[Distribution]
+            Distributions to filter by.
+
+        Returns
+        -------
+        sa.ColumnElement[bool]
+            SQL OR expression for all distributions.
+        """
         clauses = [
             cls.compare_to_distribution(distribution)
             for distribution in distributions
@@ -218,6 +247,18 @@ class Library(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def get_installed_python_libraries(cls, db):
+        """Get or create Library instances for installed packages.
+
+        Parameters
+        ----------
+        db : Session
+            Database session.
+
+        Returns
+        -------
+        list[Library]
+            List of Library instances from environment.
+        """
         q = cls.select()
         libraries = []
         filters = []

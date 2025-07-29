@@ -46,10 +46,23 @@ class DataProduct(base.Base, base.CreatedOnMixin):
     )
 
     def __repr__(self):
+        """Return string representation of DataProduct."""
         return f"<DP {self.id} {self.path}>"
 
     @classmethod
     def from_file(cls, fd: typing.IO) -> "DataProduct":
+        """Create DataProduct from file object.
+
+        Parameters
+        ----------
+        fd : typing.IO
+            File object to create DataProduct from.
+
+        Returns
+        -------
+        DataProduct
+            New DataProduct instance with calculated hash.
+        """
         path = fd.name
         fd.seek(0)
         hash_val = mmh3.hash64(fd.read())[0]
@@ -59,6 +72,18 @@ class DataProduct(base.Base, base.CreatedOnMixin):
 
     @classmethod
     def from_path(cls, path: pathlib.Path) -> "DataProduct":
+        """Create DataProduct from file path.
+
+        Parameters
+        ----------
+        path : pathlib.Path
+            Path to file to create DataProduct from.
+
+        Returns
+        -------
+        DataProduct
+            New DataProduct instance, with hash if file exists.
+        """
         if path.exists():
             with open(path, "rb") as fin:
                 return cls.from_file(fin)
@@ -67,10 +92,18 @@ class DataProduct(base.Base, base.CreatedOnMixin):
             return cls(path=path)
 
     def calculate_hash(self):
+        """Calculate hash for this data product.
+
+        Raises
+        ------
+        NotImplementedError
+            Hash calculation not yet implemented.
+        """
         raise NotImplementedError
 
     @hybrid_property
     def path(self):
+        """Get the path of this data product."""
         return self._path
 
     @path.inplace.setter
@@ -83,7 +116,7 @@ class DataProduct(base.Base, base.CreatedOnMixin):
             self._path = pathlib.Path(value.name).resolve()
         else:
             try:
-                self._path = pathlib.Path(getattr(value, "name")).resolve()
+                self._path = pathlib.Path(value.name).resolve()
             except AttributeError:
                 raise ValueError(f"Cannot cast {value} to path-like")
 

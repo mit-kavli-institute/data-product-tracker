@@ -21,6 +21,7 @@ class DataProductTracker:
     """Main tracker for monitoring data products and their relationships."""
 
     def __init__(self):
+        """Initialize DataProductTracker with database and caches."""
         self.assign_db(session_factory())
         self.env_id = None
         self.dump_cache()

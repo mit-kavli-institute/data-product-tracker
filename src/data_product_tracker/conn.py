@@ -26,7 +26,28 @@ def configure_engine(
     database_port,
     **engine_kwargs,
 ):
+    """Configure SQLAlchemy engine with PostgreSQL connection.
 
+    Parameters
+    ----------
+    username : str
+        Database username.
+    password : str
+        Database password.
+    database_name : str
+        Name of the database (default: 'dataproducttracker').
+    database_host : str
+        Database host (default: 'localhost').
+    database_port : int
+        Database port (default: 5432).
+    **engine_kwargs
+        Additional keyword arguments for create_engine.
+
+    Returns
+    -------
+    sqlalchemy.engine.Engine
+        Configured database engine.
+    """
     url = sa.URL.create(
         "postgresql+psycopg",
         database=database_name,

@@ -23,10 +23,25 @@ class Invocation(base.Base, base.CreatedOnMixin):
     command: Mapped[str]
 
     def __repr__(self):
+        """Return string representation."""
         return f"<Invocation {self.id}: {self.function}() from {self.command}>"
 
     @classmethod
     def reflect_call(cls, function, environment_id=None):
+        """Create Invocation from current function context.
+
+        Parameters
+        ----------
+        function : str
+            Name of the function being invoked.
+        environment_id : int, optional
+            ID of the environment for this invocation.
+
+        Returns
+        -------
+        Invocation
+            New Invocation instance.
+        """
         invocation = cls(
             function=function,
             command=" ".join(sys.argv),

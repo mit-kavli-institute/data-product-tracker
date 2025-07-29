@@ -51,6 +51,18 @@ class Base(DeclarativeBase):
 
     @classmethod
     def select(cls, *attrs: str):
+        """Create a SELECT query for this model.
+
+        Parameters
+        ----------
+        *attrs : str
+            Column names to select. If empty, selects entire model.
+
+        Returns
+        -------
+        sqlalchemy.sql.Select
+            Select statement for the model.
+        """
         if len(attrs) > 0:
             return sa.select(*[getattr(cls, attr) for attr in attrs])
 
@@ -64,6 +76,7 @@ class CreatedOnMixin:
 
     @declared_attr.directive
     def __table_args__(cls):
+        """Generate table arguments for BRIN index on created_on."""
         tablename = cls.__tablename__
         return (
             sa.Index(
