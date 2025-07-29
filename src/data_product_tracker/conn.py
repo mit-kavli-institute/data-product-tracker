@@ -1,3 +1,8 @@
+"""Database connection management for Data Product Tracker.
+
+Provides session factory and engine configuration for PostgreSQL connections.
+"""
+
 import pathlib
 import warnings
 
@@ -21,7 +26,28 @@ def configure_engine(
     database_port,
     **engine_kwargs,
 ):
+    """Configure SQLAlchemy engine with PostgreSQL connection.
 
+    Parameters
+    ----------
+    username : str
+        Database username.
+    password : str
+        Database password.
+    database_name : str
+        Name of the database (default: 'dataproducttracker').
+    database_host : str
+        Database host (default: 'localhost').
+    database_port : int
+        Database port (default: 5432).
+    **engine_kwargs
+        Additional keyword arguments for create_engine.
+
+    Returns
+    -------
+    sqlalchemy.engine.Engine
+        Configured database engine.
+    """
     url = sa.URL.create(
         "postgresql+psycopg",
         database=database_name,
@@ -39,15 +65,16 @@ CONFIG_DIR = (pathlib.Path("~") / ".config" / "dpt").expanduser()
 CONFIG_PATH = CONFIG_DIR / "db.conf"
 
 
-Session = orm.sessionmaker(expire_on_commit=False)
+session_factory = orm.sessionmaker(expire_on_commit=False)
 
 
 if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
     warnings.warn(
         f"{str(CONFIG_PATH)} does not exist. Creating scaffold there...",
         RuntimeWarning,
+        stacklevel=2,
     )
     db = None
 else:
-    Session.configure(bind=configure_engine(CONFIG_PATH))
-    db = Session()
+    session_factory.configure(bind=configure_engine(CONFIG_PATH))
+    db = session_factory()

@@ -15,11 +15,6 @@ repos:
     rev: 5.13.2
     hooks:
     -   id: isort
--   repo: https://github.com/hadialqattan/pycln
-    rev: v2.4.0
-    hooks:
-    -   id: pycln
-        args: [--config=pyproject.toml]
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:

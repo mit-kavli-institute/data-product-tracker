@@ -1,3 +1,5 @@
+"""Library distribution management utilities."""
+
 import typing
 from importlib import metadata
 
@@ -7,6 +9,13 @@ Distribution = typing.NamedTuple(
 
 
 def yield_distributions() -> typing.Generator[Distribution, typing.Any, None]:
+    """Yield unique installed Python distributions.
+
+    Yields
+    ------
+    Distribution
+        Named tuple with name and version of each unique distribution.
+    """
     mask = set()
     for dist in metadata.distributions():
         converted = Distribution(
