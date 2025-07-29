@@ -30,6 +30,8 @@ class Environment(base.Base, base.CreatedOnMixin):
         secondary="library_environment_mappings",
     )
 
+    __table_args__ = (sa.Index("idx_environment_host", "host"),)
+
 
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
     """Maps variables to environments."""
@@ -138,7 +140,10 @@ class Variable(base.Base, base.CreatedOnMixin):
         secondary="variable_environment_mappings",
     )
 
-    __table_args__ = (sa.UniqueConstraint("key", "value"),)
+    __table_args__ = (
+        sa.UniqueConstraint("key", "value"),
+        sa.Index("idx_variable_key_value", "key", "value"),
+    )
 
     def __hash__(self):
         """Return hash of variable key-value pair."""
@@ -191,6 +196,9 @@ class Variable(base.Base, base.CreatedOnMixin):
             SQL OR expression for all variables.
         """
         clauses = [cls.compare_to_variable(var) for var in os_variables]
+        # Handle empty list case to avoid deprecation warning
+        if not clauses:
+            return sa.false()
         return sa.or_(*clauses)
 
     @classmethod
@@ -249,7 +257,10 @@ class Library(base.Base, base.CreatedOnMixin):
         secondary="library_environment_mappings",
     )
 
-    __table_args__ = (sa.UniqueConstraint("name", "version"),)
+    __table_args__ = (
+        sa.UniqueConstraint("name", "version"),
+        sa.Index("idx_library_name_version", "name", "version"),
+    )
 
     def __hash__(self):
         """Return hash of library name-version pair."""
@@ -306,6 +317,9 @@ class Library(base.Base, base.CreatedOnMixin):
             cls.compare_to_distribution(distribution)
             for distribution in distributions
         ]
+        # Handle empty list case to avoid deprecation warning
+        if not clauses:
+            return sa.false()
         return sa.or_(*clauses)
 
     @classmethod

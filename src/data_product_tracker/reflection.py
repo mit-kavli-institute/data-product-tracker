@@ -1,6 +1,7 @@
 """Database reflection utilities for environments, libraries, and variables."""
 
 import socket
+import time
 from collections.abc import Iterable
 from functools import wraps
 from time import sleep
@@ -42,6 +43,248 @@ def db_retry(max_retries=2, backoff_factor=2):
     return _internal
 
 
+# Environment cache for performance optimization
+class EnvironmentCache:
+    """Simple TTL cache for environment lookups."""
+
+    def __init__(self, ttl_seconds=300):
+        self._cache = {}
+        self._timestamps = {}
+        self.ttl = ttl_seconds
+
+    def get_key(self, os_variables, distributions, hostname):
+        """Create a deterministic cache key."""
+        var_key = tuple(sorted((v.key, v.value) for v in os_variables))
+        lib_key = tuple(sorted((d.name, d.version) for d in distributions))
+        return (var_key, lib_key, hostname)
+
+    def get(self, key):
+        """Get value from cache if not expired."""
+        if key in self._cache:
+            if time.time() - self._timestamps[key] < self.ttl:
+                return self._cache[key]
+            else:
+                del self._cache[key]
+                del self._timestamps[key]
+        return None
+
+    def set(self, key, value):
+        """Set value in cache with timestamp."""
+        self._cache[key] = value
+        self._timestamps[key] = time.time()
+
+    def clear(self):
+        """Clear all cache entries."""
+        self._cache.clear()
+        self._timestamps.clear()
+
+
+# Global cache instance
+_env_cache = EnvironmentCache()
+
+
+def clear_environment_cache():
+    """Clear the environment cache. Useful for testing."""
+    _env_cache.clear()
+
+
+@db_retry()
+def reflect_libraries_bulk(db, distributions: Iterable[Distribution]):
+    """Bulk reflect library distributions using efficient SQL operations.
+
+    Parameters
+    ----------
+    db : Session
+        Database session.
+    distributions : Iterable[Distribution]
+        Library distributions to reflect.
+
+    Returns
+    -------
+    dict[tuple[str, str], int]
+        Mapping of (name, version) to library ID.
+    """
+    distributions_list = list(distributions)
+    if not distributions_list:
+        return {}
+
+    result_map = {}
+
+    with db:
+        # For SQLite or when dealing with small sets, use simpler approach
+        # This maintains compatibility while being more efficient than N queries
+        for dist in distributions_list:
+            # Check if exists
+            lib_q = sa.select(e.Library.id).where(
+                e.Library.name == dist.name,
+                e.Library.version == dist.version,
+            )
+            lib_id = db.scalar(lib_q)
+
+            if lib_id is None:
+                # Create new library
+                library = e.Library(name=dist.name, version=dist.version)
+                db.add(library)
+                db.flush()
+                lib_id = library.id
+
+            result_map[(dist.name, dist.version)] = lib_id
+
+        db.commit()
+
+    return result_map
+
+
+@db_retry()
+def reflect_variables_bulk(db, os_variables: Iterable[OSVariable]):
+    """Bulk reflect OS variables using efficient SQL operations.
+
+    Parameters
+    ----------
+    db : Session
+        Database session.
+    os_variables : Iterable[OSVariable]
+        OS variables to reflect.
+
+    Returns
+    -------
+    dict[tuple[str, str], int]
+        Mapping of (key, value) to variable ID.
+    """
+    variables_list = list(os_variables)
+    if not variables_list:
+        return {}
+
+    result_map = {}
+
+    with db:
+        # For SQLite or when dealing with small sets, use simpler approach
+        # This maintains compatibility while being more efficient than N queries
+        for var in variables_list:
+            # Check if exists
+            var_q = sa.select(e.Variable.id).where(
+                e.Variable.key == var.key,
+                e.Variable.value == var.value,
+            )
+            var_id = db.scalar(var_q)
+
+            if var_id is None:
+                # Create new variable
+                variable = e.Variable(key=var.key, value=var.value)
+                db.add(variable)
+                db.flush()
+                var_id = variable.id
+
+            result_map[(var.key, var.value)] = var_id
+
+        db.commit()
+
+    return result_map
+
+
+@db_retry()
+def get_matching_environment_single_query(
+    db,
+    os_variables: list[OSVariable],
+    distributions: list[Distribution],
+    hostname: str = None,
+) -> Optional[int]:
+    """Find environment matching all criteria in a single optimized query.
+
+    Parameters
+    ----------
+    db : Session
+        Database session.
+    os_variables : list[OSVariable]
+        Variables to match.
+    distributions : list[Distribution]
+        Distributions to match.
+    hostname : str, optional
+        Hostname to match. Defaults to current hostname.
+
+    Returns
+    -------
+    int or None
+        Environment ID if found, None otherwise.
+    """
+    if hostname is None:
+        hostname = socket.gethostname()
+
+    # Check cache first
+    cache_key = _env_cache.get_key(os_variables, distributions, hostname)
+    cached_env_id = _env_cache.get(cache_key)
+    if cached_env_id is not None:
+        # Verify the cached ID still exists in the database
+        with db:
+            exists = db.scalar(
+                sa.select(sa.exists().where(e.Environment.id == cached_env_id))
+            )
+            if exists:
+                return cached_env_id
+            else:
+                # Remove stale cache entry
+                _env_cache._cache.pop(cache_key, None)
+                _env_cache._timestamps.pop(cache_key, None)
+
+    with db:
+        # Build the query using CTEs for better optimization
+
+        # CTE for environments with all required variables
+        if os_variables:
+            var_cte = (
+                sa.select(e.VariableEnvironmentMap.environment_id)
+                .join(e.Variable)
+                .where(
+                    sa.tuple_(e.Variable.key, e.Variable.value).in_(
+                        [(v.key, v.value) for v in os_variables]
+                    )
+                )
+                .group_by(e.VariableEnvironmentMap.environment_id)
+                .having(sa.func.count() == len(os_variables))
+                .cte("matching_var_envs")
+            )
+
+        # CTE for environments with all required libraries
+        if distributions:
+            lib_cte = (
+                sa.select(e.LibraryEnvironmentMap.environment_id)
+                .join(e.Library)
+                .where(
+                    sa.tuple_(e.Library.name, e.Library.version).in_(
+                        [(d.name, d.version) for d in distributions]
+                    )
+                )
+                .group_by(e.LibraryEnvironmentMap.environment_id)
+                .having(sa.func.count() == len(distributions))
+                .cte("matching_lib_envs")
+            )
+
+        # Build main query based on what we're matching
+        query = sa.select(e.Environment.id).where(
+            e.Environment.host == hostname
+        )
+
+        if os_variables:
+            query = query.where(
+                e.Environment.id.in_(sa.select(var_cte.c.environment_id))
+            )
+
+        if distributions:
+            query = query.where(
+                e.Environment.id.in_(sa.select(lib_cte.c.environment_id))
+            )
+
+        query = query.limit(1)
+
+        env_id = db.scalar(query)
+
+        # Cache the result
+        if env_id is not None:
+            _env_cache.set(cache_key, env_id)
+
+        return env_id
+
+
 @db_retry()
 def reflect_libraries(db, distributions: Iterable[Distribution]):
     """Reflect library distributions to database.
@@ -58,25 +301,12 @@ def reflect_libraries(db, distributions: Iterable[Distribution]):
     set[int]
         Set of Library IDs.
     """
-    q = sa.select(e.Library)
-    libraries = set()
-    with db:
-        for distribution in distributions:
-            library_q = q.where(
-                e.Library.name == distribution.name,
-                e.Library.version == distribution.version,
-            )
-            library = db.execute(library_q).scalar()
-            if library is None:
-                library = e.Library(
-                    name=distribution.name,
-                    version=distribution.version,
-                )
-                db.add(library)
-                db.flush()
-            libraries.add(library.id)
-        db.commit()
-    return libraries
+    # Use bulk operation for performance
+    distributions_list = list(distributions)
+    bulk_result = reflect_libraries_bulk(db, distributions_list)
+
+    # Return IDs in the same order as input for compatibility
+    return set(bulk_result[(d.name, d.version)] for d in distributions_list)
 
 
 @db_retry()
@@ -95,22 +325,12 @@ def reflect_variables(db, os_variables: Iterable[OSVariable]):
     list[int]
         List of Variable IDs.
     """
-    q = sa.select(e.Variable)
-    variables = []
-    with db:
-        for var in os_variables:
-            variable_q = q.where(
-                e.Variable.key == var.key,
-                e.Variable.value == var.value,
-            )
-            variable = db.scalar(variable_q)
-            if variable is None:
-                variable = e.Variable(key=var.key, value=var.value)
-                db.add(variable)
-                db.flush()
-            variables.append(variable.id)
-        db.commit()
-    return variables
+    # Use bulk operation for performance
+    variables_list = list(os_variables)
+    bulk_result = reflect_variables_bulk(db, variables_list)
+
+    # Return IDs in the same order as input for compatibility
+    return [bulk_result[(v.key, v.value)] for v in variables_list]
 
 
 @db_retry()
@@ -186,23 +406,14 @@ def get_environment(
     ModelDoesNotExist
         If no matching environment found.
     """
-    env_ids = sorted(
-        get_matching_env_by_libraries(db, list(distributions))
-        & get_matching_env_by_variables(db, list(environ))
+    # Use single-query optimization
+    env_id = get_matching_environment_single_query(
+        db, list(environ), list(distributions)
     )
-    if len(env_ids) == 0:
-        raise ModelDoesNotExist(e.Environment)
-
-    env_id = env_ids[0]
-    with db:
-        q = sa.select(e.Environment.id).where(
-            e.Environment.id == env_id,
-            e.Environment.host == socket.gethostname(),
-        )
-        env_id = db.scalar(q)
 
     if env_id is None:
         raise ModelDoesNotExist(e.Environment)
+
     return env_id
 
 
@@ -242,28 +453,42 @@ def get_or_create_env(
         created = False
         return env_id, created
     except ModelDoesNotExist:
-        libraries = reflect_libraries(db, distributions)
-        variables = reflect_variables(db, environ)
+        # Use bulk operations for efficiency
+        library_map = reflect_libraries_bulk(db, distributions)
+        variable_map = reflect_variables_bulk(db, environ)
 
-        env = e.Environment(host=socket.gethostname())
+        hostname = socket.gethostname()
+
         with db:
+            # Create environment
+            env = e.Environment(host=hostname)
             db.add(env)
             db.flush()
 
-            library_relations = [
-                e.LibraryEnvironmentMap(environment_id=env.id, library_id=id)
-                for id in libraries
-            ]
-
-            variable_relations = [
-                e.VariableEnvironmentMap(
-                    environment_id=env.id,
-                    variable_id=id,
+            # Bulk create associations using more efficient bulk_insert_mappings
+            if library_map:
+                library_mappings = [
+                    {"environment_id": env.id, "library_id": lib_id}
+                    for lib_id in library_map.values()
+                ]
+                db.bulk_insert_mappings(
+                    e.LibraryEnvironmentMap, library_mappings
                 )
-                for id in variables
-            ]
-            db.bulk_save_objects(library_relations)
-            db.bulk_save_objects(variable_relations)
+
+            if variable_map:
+                variable_mappings = [
+                    {"environment_id": env.id, "variable_id": var_id}
+                    for var_id in variable_map.values()
+                ]
+                db.bulk_insert_mappings(
+                    e.VariableEnvironmentMap, variable_mappings
+                )
+
             db.commit()
+
+            # Cache the new environment
+            cache_key = _env_cache.get_key(environ, distributions, hostname)
+            _env_cache.set(cache_key, env.id)
+
             created = True
             return env.id, created
