@@ -58,9 +58,6 @@ line-length = 79
 profile = "black"
 line_length = 79
 
-[tool.flake8]
-max-line-length = 81
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = [

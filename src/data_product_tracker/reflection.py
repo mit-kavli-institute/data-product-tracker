@@ -559,7 +559,7 @@ def get_or_create_env(
             db.add(env)
             db.flush()
 
-            # Bulk create associations using more efficient bulk_insert_mappings
+            # Bulk create associations using bulk_insert_mappings
             if library_map:
                 library_mappings = [
                     {"environment_id": env.id, "library_id": lib_id}
