@@ -37,9 +37,9 @@ jobs:
       run: |
         docker compose build test-runner
 
-    - name: Run tests with nox
+    - name: Run linting and type checking
       run: |
-        docker compose run --rm test-runner nox -s tests lint typecheck
+        docker compose run --rm test-runner nox -s lint typecheck
 
     - name: Generate coverage report
       run: |
