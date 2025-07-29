@@ -7,8 +7,60 @@ on:
     branches: [ master, staging ]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build test container
+      run: |
+        docker compose build test-runner
+
+    - name: Run flake8 linting
+      run: |
+        docker compose run --rm test-runner nox -s lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure SSH for private dependencies
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -t rsa tessgit.mit.edu >> ~/.ssh/known_hosts
+
+    - name: Build test container
+      run: |
+        docker compose build test-runner
+
+    - name: Run mypy type checking
+      run: |
+        docker compose run --rm test-runner nox -s typecheck
+
+  format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build test container
+      run: |
+        docker compose build test-runner
+
+    - name: Check code formatting
+      run: |
+        docker compose run --rm test-runner nox -s format -- --check
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: test-python-versions
 
     steps:
     - uses: actions/checkout@v4
@@ -24,22 +76,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Configure SSH for private dependencies
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -t rsa tessgit.mit.edu >> ~/.ssh/known_hosts
-
     - name: Build test container
       run: |
         docker compose build test-runner
-
-    - name: Run linting and type checking
-      run: |
-        docker compose run --rm test-runner nox -s lint typecheck
 
     - name: Generate coverage report
       run: |
@@ -107,3 +146,21 @@ jobs:
         name: documentation
         path: docs/_build/html/
       if: always()
+
+  safety-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build test container
+      run: |
+        docker compose build test-runner
+
+    - name: Check for security vulnerabilities (Python ${{ matrix.python-version }})
+      run: |
+        docker compose run --rm test-runner nox -s safety-${{ matrix.python-version }}
+      continue-on-error: true
