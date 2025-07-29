@@ -12,10 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./scripts/docker-test.sh test lint   # Run only linting
 ./scripts/docker-test.sh shell       # Interactive shell
 
-# Using docker-compose directly
-docker-compose run --rm test-runner                    # Run all tests
-docker-compose run --rm test-runner nox -s tests      # Run pytest
-docker-compose run --rm test-runner nox -s tests-3.11 # Specific Python version
+# Using docker compose directly (Note: use 'docker-compose' for older Docker versions)
+docker compose run --rm test-runner                    # Run all tests
+docker compose run --rm test-runner nox -s tests      # Run pytest
+docker compose run --rm test-runner nox -s tests-3.11 # Specific Python version
 
 # Local development (if nox installed)
 nox              # Run default sessions
@@ -30,9 +30,9 @@ nox -s docs      # Build documentation
 ### Code Quality & Formatting
 ```bash
 # Using Docker
-docker-compose run --rm test-runner nox -s format    # Format with black & isort
-docker-compose run --rm test-runner nox -s lint      # Lint with flake8
-docker-compose run --rm test-runner nox -s typecheck # Type check with mypy
+docker compose run --rm test-runner nox -s format    # Format with black & isort
+docker compose run --rm test-runner nox -s lint      # Lint with flake8
+docker compose run --rm test-runner nox -s typecheck # Type check with mypy
 
 # Local development (if tools installed)
 nox -s format    # Format code
@@ -43,8 +43,8 @@ nox -s typecheck # Run type checking
 ### Documentation
 ```bash
 # Using Docker
-docker-compose run --rm test-runner nox -s docs         # Build docs
-docker-compose up docs                                  # Build and serve docs
+docker compose run --rm test-runner nox -s docs         # Build docs
+docker compose up docs                                  # Build and serve docs
 
 # Local development
 nox -s docs         # Build documentation

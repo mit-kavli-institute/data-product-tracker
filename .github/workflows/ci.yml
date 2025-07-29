@@ -35,15 +35,15 @@ jobs:
 
     - name: Build test container
       run: |
-        docker-compose build test-runner
+        docker compose build test-runner
 
     - name: Run tests with nox
       run: |
-        docker-compose run --rm test-runner nox -s tests lint typecheck
+        docker compose run --rm test-runner nox -s tests lint typecheck
 
     - name: Generate coverage report
       run: |
-        docker-compose run --rm test-runner nox -s coverage
+        docker compose run --rm test-runner nox -s coverage
 
     - name: Upload coverage reports
       uses: actions/upload-artifact@v4
@@ -81,11 +81,11 @@ jobs:
 
     - name: Build test container
       run: |
-        docker-compose build test-runner
+        docker compose build test-runner
 
     - name: Run tests for Python ${{ matrix.python-version }}
       run: |
-        docker-compose run --rm test-runner nox -s tests-${{ matrix.python-version }}
+        docker compose run --rm test-runner nox -s tests-${{ matrix.python-version }}
 
   docs:
     runs-on: ubuntu-latest
@@ -95,11 +95,11 @@ jobs:
 
     - name: Build test container
       run: |
-        docker-compose build test-runner
+        docker compose build test-runner
 
     - name: Build documentation
       run: |
-        docker-compose run --rm test-runner nox -s docs
+        docker compose run --rm test-runner nox -s docs
 
     - name: Upload documentation
       uses: actions/upload-artifact@v4

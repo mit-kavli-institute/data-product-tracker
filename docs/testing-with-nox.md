@@ -24,19 +24,21 @@ The easiest way to run tests is using the provided Docker wrapper script:
 ./scripts/docker-test.sh docs
 ```
 
-### Using docker-compose directly
+### Using docker compose directly
 
 ```bash
 # Run all tests
-docker-compose run --rm test-runner
+docker compose run --rm test-runner
 
 # Run specific nox session
-docker-compose run --rm test-runner nox -s tests
-docker-compose run --rm test-runner nox -s lint
+docker compose run --rm test-runner nox -s tests
+docker compose run --rm test-runner nox -s lint
 
 # Interactive development
-docker-compose run --rm dev
+docker compose run --rm dev
 ```
+
+> **Note**: For older Docker versions, use `docker-compose` (hyphenated) instead of `docker compose`.
 
 ## Test Environment
 
@@ -176,7 +178,7 @@ GitHub Actions workflow uses Docker for consistent testing:
 ### Docker Build Issues
 ```bash
 # Rebuild without cache
-docker-compose build --no-cache test-runner
+docker compose build --no-cache test-runner
 ```
 
 ### Permission Issues
