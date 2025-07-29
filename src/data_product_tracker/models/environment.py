@@ -1,3 +1,5 @@
+"""Environment, library, and variable models."""
+
 import functools
 import os
 from importlib.metadata import distributions
@@ -12,6 +14,8 @@ from data_product_tracker.variables import OSVariable
 
 
 class Environment(base.Base, base.CreatedOnMixin):
+    """Represents a computational environment with variables and libraries."""
+
     __tablename__ = "environments"
 
     host: Mapped[str] = mapped_column(sa.String(), default=gethostname)
@@ -28,6 +32,8 @@ class Environment(base.Base, base.CreatedOnMixin):
 
 
 class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
+    """Maps variables to environments."""
+
     __tablename__ = "variable_environment_mappings"
 
     environment_id: Mapped[int] = mapped_column(
@@ -62,6 +68,8 @@ class VariableEnvironmentMap(base.Base, base.CreatedOnMixin):
 
 
 class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
+    """Maps libraries to environments."""
+
     __tablename__ = "library_environment_mappings"
 
     environment_id: Mapped[int] = mapped_column(
@@ -92,6 +100,8 @@ class LibraryEnvironmentMap(base.Base, base.CreatedOnMixin):
 
 
 class Variable(base.Base, base.CreatedOnMixin):
+    """Represents an environment variable."""
+
     __tablename__ = "variables"
 
     key: Mapped[str]
@@ -162,6 +172,8 @@ class Variable(base.Base, base.CreatedOnMixin):
 
 
 class Library(base.Base, base.CreatedOnMixin):
+    """Represents an installed Python library/package."""
+
     __tablename__ = "libraries"
 
     name: Mapped[str]

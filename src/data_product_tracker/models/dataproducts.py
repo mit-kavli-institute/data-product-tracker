@@ -1,3 +1,5 @@
+"""Data product and hierarchy models."""
+
 import pathlib
 import typing
 from io import FileIO
@@ -12,6 +14,8 @@ from data_product_tracker.models.base import PathType
 
 
 class DataProductHierarchy(base.Base, base.CreatedOnMixin):
+    """Represents parent-child relationships between data products."""
+
     __tablename__ = "data_product_hierarchies"
 
     parent_id: Mapped[int] = mapped_column(
@@ -23,6 +27,8 @@ class DataProductHierarchy(base.Base, base.CreatedOnMixin):
 
 
 class DataProduct(base.Base, base.CreatedOnMixin):
+    """Represents a tracked data product with metadata and relationships."""
+
     __tablename__ = "data_products"
 
     invocation_id: Mapped[typing.Optional[int]] = mapped_column(

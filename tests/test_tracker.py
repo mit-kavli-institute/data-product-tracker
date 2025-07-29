@@ -1,3 +1,5 @@
+"""Tests for data product tracking functionality."""
+
 import pathlib
 from tempfile import TemporaryDirectory
 

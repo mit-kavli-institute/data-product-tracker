@@ -1,3 +1,5 @@
+"""Environment variable management utilities."""
+
 import os
 import typing
 

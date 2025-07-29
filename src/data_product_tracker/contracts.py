@@ -1,6 +1,4 @@
-"""
-This module contains contracts which are used for integration tests.
-"""
+"""Contracts for integration tests using the `deal` library."""
 
 import sqlalchemy as sa
 

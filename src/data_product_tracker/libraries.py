@@ -1,3 +1,5 @@
+"""Library distribution management utilities."""
+
 import typing
 from importlib import metadata
 

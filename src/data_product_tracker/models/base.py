@@ -1,3 +1,5 @@
+"""Base models and mixins for Data Product Tracker."""
+
 import pathlib
 from datetime import datetime
 
@@ -12,7 +14,10 @@ from sqlalchemy.types import TypeDecorator
 
 
 class PathType(TypeDecorator):
-    """Represents a pathlib.Path as a string in the database."""
+    """Represents a pathlib.Path as a string in the database.
+
+    Handles conversion between pathlib.Path objects and database strings.
+    """
 
     impl = sa.String
     cache_ok = True
@@ -31,6 +36,11 @@ class PathType(TypeDecorator):
 
 
 class Base(DeclarativeBase):
+    """Base model class for all Data Product Tracker models.
+
+    Provides common fields and type annotations for all models.
+    """
+
     id: Mapped[int] = mapped_column(
         sa.Integer().with_variant(sa.BigInteger(), "postgresql"),
         primary_key=True,
@@ -48,11 +58,13 @@ class Base(DeclarativeBase):
 
 
 class CreatedOnMixin:
+    """Mixin to add created_on timestamp to models."""
+
     created_on: Mapped[datetime] = mapped_column(default=sa.func.now())
 
     @declared_attr.directive
     def __table_args__(cls):
-        tablename = getattr(cls, "__tablename__")
+        tablename = cls.__tablename__
         return (
             sa.Index(
                 f"idx_{tablename}_created_on",

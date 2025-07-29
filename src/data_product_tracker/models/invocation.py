@@ -1,3 +1,5 @@
+"""Invocation tracking models."""
+
 import sys
 from getpass import getuser
 
@@ -8,6 +10,8 @@ from data_product_tracker.models import base
 
 
 class Invocation(base.Base, base.CreatedOnMixin):
+    """Represents a function invocation context."""
+
     __tablename__ = "invocations"
 
     user: Mapped[str] = mapped_column(sa.String(128), default=getuser)

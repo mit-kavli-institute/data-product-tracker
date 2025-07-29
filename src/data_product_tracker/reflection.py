@@ -1,3 +1,5 @@
+"""Database reflection utilities for environments, libraries, and variables."""
+
 import socket
 from collections.abc import Iterable
 from functools import wraps
@@ -14,9 +16,9 @@ from data_product_tracker.variables import OSVariable, yield_os_variables
 
 
 def db_retry(max_retries=2, backoff_factor=2):
-    """
-    Wrap a function to retry a database operation. Retries are done using
-    an increasing backoff factor.
+    """Wrap a function to retry a database operation.
+
+    Retries are done using an increasing backoff factor.
     """
 
     def _internal(func):

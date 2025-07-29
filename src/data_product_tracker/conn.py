@@ -1,3 +1,8 @@
+"""Database connection management for Data Product Tracker.
+
+Provides session factory and engine configuration for PostgreSQL connections.
+"""
+
 import pathlib
 import warnings
 
@@ -46,6 +51,7 @@ if not CONFIG_DIR.exists() or not CONFIG_PATH.exists():
     warnings.warn(
         f"{str(CONFIG_PATH)} does not exist. Creating scaffold there...",
         RuntimeWarning,
+        stacklevel=2,
     )
     db = None
 else:
