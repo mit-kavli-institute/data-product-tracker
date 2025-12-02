@@ -13,13 +13,6 @@ except ImportError:
 from data_product_tracker import sql as _sql  # noqa F401
 from data_product_tracker.io.trackers import tracker
 
-try:
-    import deal
-
-    deal.disable()
-except ImportError:
-    pass
-
 __all__ = [
     "tracker",
 ]

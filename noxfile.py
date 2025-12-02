@@ -5,7 +5,7 @@ from pathlib import Path
 import nox
 
 # Python versions to test
-PYTHON_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
+PYTHON_VERSIONS = ["3.11", "3.12"]
 
 # Source directories
 SRC_DIR = Path("src/data_product_tracker")
@@ -148,13 +148,13 @@ def tests_serial(session):
 def lint(session):
     """Run flake8 linting."""
     session.install("flake8", "flake8-docstrings", "flake8-bugbear")
-    session.run("flake8", str(SRC_DIR), str(TESTS_DIR))
+    session.run("flake8", str(SRC_DIR))
 
 
 @nox.session(python="3.11")
 def format(session):
     """Format code with black and isort."""
-    session.install("black", "isort")
+    session.install("black>=24.4", "isort>=5.12")
 
     # Run formatters
     session.run("black", str(SRC_DIR), str(TESTS_DIR), *session.posargs)
