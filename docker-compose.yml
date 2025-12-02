@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/app
+      - nox-cache:/app/.nox
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
@@ -118,3 +119,6 @@ services:
 networks:
   test-network:
     driver: bridge
+
+volumes:
+  nox-cache:
