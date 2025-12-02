@@ -2,7 +2,7 @@ services:
   test-runner:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile
     volumes:
       - .:/app
     environment:
