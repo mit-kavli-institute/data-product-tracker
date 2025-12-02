@@ -154,7 +154,7 @@ def lint(session):
 @nox.session(python="3.11")
 def format(session):
     """Format code with black and isort."""
-    session.install("black", "isort")
+    session.install("black>=24.4", "isort>=5.12")
 
     # Run formatters
     session.run("black", str(SRC_DIR), str(TESTS_DIR), *session.posargs)
