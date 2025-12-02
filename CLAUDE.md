@@ -143,3 +143,4 @@ This is a data product tracking system built to monitor and manage data products
 
 - Alembic configuration template exists (`alembic.ini.conf`) but is not actively configured
 - Database schema is currently managed through SQLAlchemy's `create_all` method
+- Tests are executed via docker commands like: docker-compose run --rm test-runner
