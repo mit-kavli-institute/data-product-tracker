@@ -61,7 +61,9 @@ def test_reflection_of_libraries(db_session_file, distribution: Distribution):
 
 
 @given(dpt_st.environs(), dpt_st.library_installations())
-@settings(suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None)
+@settings(
+    suppress_health_check=[HealthCheck.function_scoped_fixture], deadline=None
+)
 def test_reflection_of_environment(db_session_file, environ, distributions):
     # Clean up any existing data to ensure test isolation
     with db_session_file:
