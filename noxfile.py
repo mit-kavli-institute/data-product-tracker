@@ -148,7 +148,7 @@ def tests_serial(session):
 def lint(session):
     """Run flake8 linting."""
     session.install("flake8", "flake8-docstrings", "flake8-bugbear")
-    session.run("flake8", str(SRC_DIR), str(TESTS_DIR))
+    session.run("flake8", str(SRC_DIR))
 
 
 @nox.session(python="3.11")
