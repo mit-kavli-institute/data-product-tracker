@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.0.0-beta.3 (2025-12-02)
+
+### Bug Fixes
+
+- Pin black and isort versions in nox format session
+  ([`a5d42f2`](https://github.com/mit-kavli-institute/data-product-tracker/commit/a5d42f281f64d6107e46b4e711505bf7019a1c56))
+
+
 ## v2.0.0-beta.2 (2025-12-02)
 
 
