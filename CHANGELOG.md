@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v2.0.0 (2025-12-02)
+
+### Code Style
+
+- Format test_reflection.py with black
+  ([`43dc521`](https://github.com/mit-kavli-institute/data-product-tracker/commit/43dc521005186cbb6f953a64fc272374266fb467))
+
+
 ## v2.0.0-beta.3 (2025-12-02)
 
 ### Bug Fixes
