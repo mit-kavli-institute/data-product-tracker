@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v2.0.0-beta.1 (2025-12-02)
+
+### Features
+
+- Drop Python 3.9 and 3.10 support, require Python 3.11+
+  ([`72de394`](https://github.com/mit-kavli-institute/data-product-tracker/commit/72de394662ce018dcb80f790c9bc3de8ca87df50))
+
+### Refactoring
+
+- Rename Dockerfile.test to Dockerfile
+  ([`271d66d`](https://github.com/mit-kavli-institute/data-product-tracker/commit/271d66d59ffe8cdaa8fa4afa45fd5ccf3be1a06c))
+
+### Breaking Changes
+
+- Python 3.9 and 3.10 are no longer supported.
+
+
 ## v1.0.0 (2025-07-29)
 
 
