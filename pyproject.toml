@@ -8,6 +8,7 @@ version = "1.0.0"  # Managed by python-semantic-release
 description = "An interface to track various data products and their dependencies and environments"
 authors = [{name="William Fong", email="willfong@mit.edu"}]
 readme = "README.rst"
+requires-python = ">=3.11"
 
 dependencies = [
     "sqlalchemy>=2.0",

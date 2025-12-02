@@ -5,7 +5,7 @@ from pathlib import Path
 import nox
 
 # Python versions to test
-PYTHON_VERSIONS = ["3.9", "3.10", "3.11", "3.12"]
+PYTHON_VERSIONS = ["3.11", "3.12"]
 
 # Source directories
 SRC_DIR = Path("src/data_product_tracker")
